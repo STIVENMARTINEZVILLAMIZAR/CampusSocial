@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
-import { 
-  Sparkles, Calendar, FileText, Settings, 
+import {
+  Sparkles, Calendar, FileText, Settings,
   Home, PenSquare, MessageSquare, Share2,
   Search, Bell, ChevronDown, X, Check,
   Linkedin, Instagram, Facebook, Twitter,
   Clock, Trash2, Edit, Send, Plus,
   Zap, Network, BarChart3, CheckCircle2,
   ArrowRight, Play, Eye, Save, Loader2,
-  Filter, Copy, Download, Mail
+  Filter, Copy, Download, Mail, LogOut,
+  Upload, Image, Video, FileUp, CalendarClock,
+  AlarmClock, Globe, ChevronRight, Info
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -581,14 +583,16 @@ const LandingPage: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNav
 // PANTALLA 2: LOGIN + DASHBOARD SHELL (Sidebar + Topbar)
 // ============================================================================
 
-const DashboardShell: React.FC<{ 
+const DashboardShell: React.FC<{
   children: React.ReactNode;
   activeScreen: string;
   onNavigate: (screen: string) => void;
-}> = ({ children, activeScreen, onNavigate }) => {
+  onLogout?: () => void;
+}> = ({ children, activeScreen, onNavigate, onLogout }) => {
   const menuItems = [
     { id: 'dashboard', icon: <Home />, label: 'Inicio' },
     { id: 'new-post', icon: <PenSquare />, label: 'Nueva publicación' },
+    { id: 'manual-post', icon: <Upload />, label: 'Subir publicación' },
     { id: 'drafts', icon: <FileText />, label: 'Borradores' },
     { id: 'calendar', icon: <Calendar />, label: 'Calendario' },
     { id: 'agent', icon: <MessageSquare />, label: 'Agente IA' },
@@ -628,7 +632,7 @@ const DashboardShell: React.FC<{
           ))}
         </nav>
 
-        <div className="p-4 border-t border-sidebar-border">
+        <div className="p-4 border-t border-sidebar-border space-y-2">
           <div className="flex items-center gap-3 px-4 py-3 bg-sidebar-accent rounded-xl">
             <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
               CL
@@ -638,6 +642,13 @@ const DashboardShell: React.FC<{
               <div className="text-xs text-muted-foreground">Marketing</div>
             </div>
           </div>
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-all duration-200 group"
+          >
+            <LogOut className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-200" />
+            Cerrar sesión
+          </button>
         </div>
       </aside>
 
@@ -954,6 +965,398 @@ const NewPostScreen: React.FC = () => {
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
+// PANTALLA: SUBIR PUBLICACIÓN MANUAL
+// ============================================================================
+
+const ManualPostScreen: React.FC = () => {
+  const [postText, setPostText] = useState('');
+  const [networks, setNetworks] = useState({ linkedin: true, instagram: false, facebook: false, twitter: false });
+  const [scheduleMode, setScheduleMode] = useState<'now' | 'schedule'>('schedule');
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
+  const [timezone, setTimezone] = useState('America/Bogota');
+  const [uploadedFiles, setUploadedFiles] = useState<{ name: string; type: string; preview?: string }[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
+  const [activePreview, setActivePreview] = useState<'linkedin' | 'instagram' | 'facebook' | 'twitter'>('linkedin');
+  const [repeatMode, setRepeatMode] = useState('none');
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const charLimits: Record<string, number> = { linkedin: 3000, instagram: 2200, facebook: 63206, twitter: 280 };
+  const networkColors: Record<string, string> = {
+    linkedin: 'text-blue-600', instagram: 'text-pink-600', facebook: 'text-blue-500', twitter: 'text-foreground'
+  };
+  const networkIcons: Record<string, React.ReactNode> = {
+    linkedin: <Linkedin className="w-4 h-4" />,
+    instagram: <Instagram className="w-4 h-4" />,
+    facebook: <Facebook className="w-4 h-4" />,
+    twitter: <Twitter className="w-4 h-4" />
+  };
+
+  const activeNetworks = Object.entries(networks).filter(([, v]) => v).map(([k]) => k);
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = Array.from(e.dataTransfer.files);
+    handleFiles(files);
+  };
+
+  const handleFiles = (files: File[]) => {
+    const mapped = files.map(f => ({
+      name: f.name,
+      type: f.type.startsWith('video') ? 'video' : 'image',
+      preview: f.type.startsWith('image') ? URL.createObjectURL(f) : undefined
+    }));
+    setUploadedFiles(prev => [...prev, ...mapped]);
+  };
+
+  const removeFile = (idx: number) => setUploadedFiles(prev => prev.filter((_, i) => i !== idx));
+
+  const notify = (msg: string) => {
+    setToastMsg(msg);
+    setShowToast(true);
+    setTimeout(() => setShowToast(false), 3500);
+  };
+
+  const handleSchedule = () => {
+    if (scheduleMode === 'schedule' && (!scheduledDate || !scheduledTime)) {
+      notify('Selecciona fecha y hora para programar.');
+      return;
+    }
+    if (activeNetworks.length === 0) {
+      notify('Selecciona al menos una red social.');
+      return;
+    }
+    if (!postText.trim()) {
+      notify('El contenido no puede estar vacío.');
+      return;
+    }
+    notify(scheduleMode === 'now' ? '¡Publicación enviada exitosamente!' : `¡Publicación programada para el ${scheduledDate} a las ${scheduledTime}!`);
+  };
+
+  const today = new Date().toISOString().split('T')[0];
+
+  return (
+    <div className="h-full bg-accent/20 overflow-y-auto">
+      <Toast message={toastMsg} type="success" show={showToast} />
+
+      <div className="max-w-[1400px] mx-auto p-6">
+        {/* Header */}
+        <div className="mb-6 flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold mb-1">Subir publicación</h1>
+            <p className="text-muted-foreground text-sm">Crea y programa contenido manualmente sin IA</p>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+            <Info className="w-4 h-4 text-amber-500 shrink-0" />
+            <span>Las publicaciones programadas se envían via <strong>n8n + Postiz</strong></span>
+          </div>
+        </div>
+
+        <div className="grid lg:grid-cols-[1fr_380px] gap-6">
+          {/* LEFT COLUMN */}
+          <div className="space-y-5">
+
+            {/* Content editor */}
+            <Card>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold">Contenido del post</h3>
+                  {activeNetworks.length > 0 && (
+                    <span className={`text-xs font-medium ${postText.length > (charLimits[activePreview] ?? 3000) ? 'text-destructive' : 'text-muted-foreground'}`}>
+                      {postText.length} / {charLimits[activePreview] ?? '–'}
+                    </span>
+                  )}
+                </div>
+                <textarea
+                  placeholder="Escribe aquí el contenido de tu publicación..."
+                  value={postText}
+                  onChange={e => setPostText(e.target.value)}
+                  rows={8}
+                  className="w-full px-4 py-3 bg-input-background border border-input rounded-xl text-sm resize-none transition-all focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent placeholder:text-muted-foreground leading-relaxed"
+                />
+                <div className="flex items-center gap-2 flex-wrap">
+                  {['😊', '🚀', '✅', '💡', '🎯', '🔥', '📌', '💬'].map(e => (
+                    <button key={e} onClick={() => setPostText(p => p + e)}
+                      className="w-8 h-8 text-lg hover:bg-accent rounded-lg transition-colors">{e}</button>
+                  ))}
+                  <span className="text-xs text-muted-foreground ml-2">Emojis rápidos</span>
+                </div>
+              </div>
+            </Card>
+
+            {/* Media Upload */}
+            <Card>
+              <div className="space-y-4">
+                <h3 className="font-semibold">Medios adjuntos</h3>
+
+                {/* Drop zone */}
+                <div
+                  onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all duration-200
+                    ${isDragging ? 'border-[#667eea] bg-purple-50' : 'border-border hover:border-[#667eea]/50 hover:bg-accent/50'}`}
+                >
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${isDragging ? 'bg-gradient-to-br from-[#667eea] to-[#764ba2]' : 'bg-accent'}`}>
+                    <FileUp className={`w-6 h-6 ${isDragging ? 'text-white' : 'text-muted-foreground'}`} />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-medium">Arrastra archivos aquí o <span className="text-[#667eea]">haz clic para seleccionar</span></p>
+                    <p className="text-xs text-muted-foreground mt-1">PNG, JPG, GIF, MP4 — máx. 10 MB por archivo</p>
+                  </div>
+                  <div className="flex gap-3 mt-1">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-accent px-3 py-1.5 rounded-lg">
+                      <Image className="w-3.5 h-3.5" />Imagen
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-accent px-3 py-1.5 rounded-lg">
+                      <Video className="w-3.5 h-3.5" />Video
+                    </div>
+                  </div>
+                  <input ref={fileInputRef} type="file" multiple accept="image/*,video/*" className="hidden"
+                    onChange={e => e.target.files && handleFiles(Array.from(e.target.files))} />
+                </div>
+
+                {/* Uploaded files */}
+                {uploadedFiles.length > 0 && (
+                  <div className="grid grid-cols-3 gap-3">
+                    {uploadedFiles.map((f, i) => (
+                      <div key={i} className="relative group rounded-xl overflow-hidden bg-accent aspect-square">
+                        {f.preview ? (
+                          <img src={f.preview} alt={f.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+                            <Video className="w-8 h-8 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground truncate px-2 text-center">{f.name}</span>
+                          </div>
+                        )}
+                        <button onClick={() => removeFile(i)}
+                          className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                          <X className="w-3.5 h-3.5 text-white" />
+                        </button>
+                        <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-white text-xs p-1.5 truncate opacity-0 group-hover:opacity-100 transition-opacity">
+                          {f.name}
+                        </div>
+                      </div>
+                    ))}
+                    <button onClick={() => fileInputRef.current?.click()}
+                      className="aspect-square border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 hover:border-[#667eea]/50 hover:bg-accent/50 transition-all cursor-pointer">
+                      <Plus className="w-6 h-6 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Añadir</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* Redes sociales */}
+            <Card>
+              <div className="space-y-4">
+                <h3 className="font-semibold">Redes de destino</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {(Object.keys(networks) as (keyof typeof networks)[]).map(net => (
+                    <button key={net} onClick={() => setNetworks(prev => ({ ...prev, [net]: !prev[net] }))}
+                      className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all font-medium text-sm
+                        ${networks[net]
+                          ? 'border-[#667eea] bg-purple-50 text-[#667eea]'
+                          : 'border-border bg-transparent text-muted-foreground hover:border-border/80 hover:bg-accent/40'}`}>
+                      <span className={networks[net] ? networkColors[net] : ''}>{networkIcons[net]}</span>
+                      {net.charAt(0).toUpperCase() + net.slice(1)}
+                      {networks[net] && <Check className="w-4 h-4 ml-auto text-[#667eea]" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* RIGHT COLUMN — Scheduling */}
+          <div className="space-y-5">
+
+            {/* Scheduling card */}
+            <Card>
+              <div className="space-y-5">
+                <div className="flex items-center gap-2">
+                  <CalendarClock className="w-5 h-5 text-[#667eea]" />
+                  <h3 className="font-semibold">Programación</h3>
+                </div>
+
+                {/* Mode toggle */}
+                <div className="grid grid-cols-2 gap-2 p-1 bg-accent rounded-xl">
+                  {([['now', 'Publicar ahora'], ['schedule', 'Programar']] as const).map(([mode, label]) => (
+                    <button key={mode} onClick={() => setScheduleMode(mode)}
+                      className={`py-2 rounded-lg text-sm font-medium transition-all
+                        ${scheduleMode === mode
+                          ? 'bg-white shadow-sm text-foreground'
+                          : 'text-muted-foreground hover:text-foreground'}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {scheduleMode === 'now' && (
+                  <div className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                    <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center shrink-0">
+                      <Send className="w-4 h-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-emerald-800">Publicación inmediata</p>
+                      <p className="text-xs text-emerald-600 mt-0.5">Se enviará a las redes seleccionadas ahora mismo</p>
+                    </div>
+                  </div>
+                )}
+
+                {scheduleMode === 'schedule' && (
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-foreground">Fecha</label>
+                      <input type="date" min={today} value={scheduledDate} onChange={e => setScheduledDate(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-input-background border border-input rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-foreground">Hora</label>
+                      <input type="time" value={scheduledTime} onChange={e => setScheduledTime(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-input-background border border-input rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                        <Globe className="w-4 h-4 text-muted-foreground" />Zona horaria
+                      </label>
+                      <select value={timezone} onChange={e => setTimezone(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-input-background border border-input rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                        <option value="America/Bogota">Colombia (UTC-5)</option>
+                        <option value="America/Mexico_City">México (UTC-6)</option>
+                        <option value="America/Lima">Perú (UTC-5)</option>
+                        <option value="America/Argentina/Buenos_Aires">Argentina (UTC-3)</option>
+                        <option value="Europe/Madrid">España (UTC+1)</option>
+                        <option value="UTC">UTC</option>
+                      </select>
+                    </div>
+
+                    {/* Repeat */}
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                        <AlarmClock className="w-4 h-4 text-muted-foreground" />Repetir
+                      </label>
+                      <select value={repeatMode} onChange={e => setRepeatMode(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-input-background border border-input rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ring">
+                        <option value="none">Sin repetición</option>
+                        <option value="daily">Diario</option>
+                        <option value="weekly">Semanal</option>
+                        <option value="biweekly">Cada 2 semanas</option>
+                        <option value="monthly">Mensual</option>
+                      </select>
+                    </div>
+
+                    {scheduledDate && scheduledTime && (
+                      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                        className="p-3 bg-purple-50 border border-purple-200 rounded-xl">
+                        <p className="text-xs font-medium text-purple-800 flex items-center gap-1.5">
+                          <CalendarClock className="w-4 h-4" />Programado para
+                        </p>
+                        <p className="text-sm font-semibold text-purple-900 mt-1">
+                          {new Date(`${scheduledDate}T${scheduledTime}`).toLocaleString('es-CO', {
+                            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                          })}
+                        </p>
+                        <p className="text-xs text-purple-600 mt-0.5">{timezone.replace('_', ' ')}</p>
+                      </motion.div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* Preview mini */}
+            <Card>
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm">Vista previa</h3>
+                {activeNetworks.length > 0 ? (
+                  <>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {activeNetworks.map(net => (
+                        <button key={net} onClick={() => setActivePreview(net as typeof activePreview)}
+                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all
+                            ${activePreview === net ? 'bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white' : 'bg-accent text-muted-foreground hover:text-foreground'}`}>
+                          {networkIcons[net]}{net.charAt(0).toUpperCase() + net.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="bg-white border border-border rounded-xl p-4 space-y-3 max-h-64 overflow-y-auto">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center text-white font-semibold text-xs shrink-0">CL</div>
+                        <div>
+                          <div className="text-xs font-semibold">Campus Lands</div>
+                          <div className="text-[11px] text-muted-foreground">Ahora</div>
+                        </div>
+                      </div>
+                      <p className="text-xs whitespace-pre-wrap leading-relaxed text-foreground">
+                        {postText || <span className="text-muted-foreground italic">El texto aparecerá aquí...</span>}
+                      </p>
+                      {uploadedFiles.length > 0 && uploadedFiles[0].preview && (
+                        <img src={uploadedFiles[0].preview} className="w-full rounded-lg object-cover max-h-32" alt="preview" />
+                      )}
+                      {uploadedFiles.length > 0 && !uploadedFiles[0].preview && (
+                        <div className="bg-accent rounded-lg h-16 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                          <Video className="w-4 h-4" />{uploadedFiles[0].name}
+                        </div>
+                      )}
+                    </div>
+                    <div className={`text-xs text-right font-medium ${postText.length > charLimits[activePreview] ? 'text-destructive' : 'text-muted-foreground'}`}>
+                      {postText.length} / {charLimits[activePreview]} caracteres
+                    </div>
+                  </>
+                ) : (
+                  <div className="py-6 flex flex-col items-center gap-2 text-center">
+                    <Eye className="w-8 h-8 text-muted-foreground/40" />
+                    <p className="text-xs text-muted-foreground">Selecciona una red social para ver la vista previa</p>
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* Action buttons */}
+            <div className="space-y-3">
+              <Button variant="primary" className="w-full" size="lg"
+                icon={scheduleMode === 'now' ? <Send /> : <CalendarClock />}
+                onClick={handleSchedule}
+                disabled={!postText.trim() || activeNetworks.length === 0}>
+                {scheduleMode === 'now' ? 'Publicar ahora' : 'Programar publicación'}
+              </Button>
+              <Button variant="outline" className="w-full" icon={<Save />}
+                onClick={() => notify('Borrador guardado correctamente')}
+                disabled={!postText.trim()}>
+                Guardar como borrador
+              </Button>
+            </div>
+
+            {/* Pipeline info */}
+            <div className="p-4 bg-accent/60 rounded-xl space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Pipeline de publicación</p>
+              {[
+                { icon: <Save className="w-3.5 h-3.5" />, label: 'CampusSocial', desc: 'Almacena y programa' },
+                { icon: <ChevronRight className="w-3.5 h-3.5" />, label: 'n8n', desc: 'Automatiza el flujo' },
+                { icon: <ChevronRight className="w-3.5 h-3.5" />, label: 'Postiz', desc: 'Publica en LinkedIn' },
+              ].map((s, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs">
+                  <span className="text-[#667eea]">{s.icon}</span>
+                  <span className="font-medium">{s.label}</span>
+                  <span className="text-muted-foreground">— {s.desc}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1628,7 +2031,7 @@ export default function App() {
       case 'login':
       case 'dashboard':
         return (
-          <DashboardShell activeScreen="dashboard" onNavigate={setCurrentScreen}>
+          <DashboardShell activeScreen="dashboard" onNavigate={setCurrentScreen} onLogout={() => setCurrentScreen('landing')}>
             <div className="p-6">
               <h1 className="text-2xl font-bold mb-4">Panel principal</h1>
               <div className="grid md:grid-cols-3 gap-4 mb-6">
@@ -1691,42 +2094,49 @@ export default function App() {
       
       case 'new-post':
         return (
-          <DashboardShell activeScreen="new-post" onNavigate={setCurrentScreen}>
+          <DashboardShell activeScreen="new-post" onNavigate={setCurrentScreen} onLogout={() => setCurrentScreen('landing')}>
             <NewPostScreen />
           </DashboardShell>
         );
-      
+
+      case 'manual-post':
+        return (
+          <DashboardShell activeScreen="manual-post" onNavigate={setCurrentScreen} onLogout={() => setCurrentScreen('landing')}>
+            <ManualPostScreen />
+          </DashboardShell>
+        );
+
       case 'drafts':
         return (
-          <DashboardShell activeScreen="drafts" onNavigate={setCurrentScreen}>
+          <DashboardShell activeScreen="drafts" onNavigate={setCurrentScreen} onLogout={() => setCurrentScreen('landing')}>
             <DraftsScreen />
           </DashboardShell>
         );
       
       case 'calendar':
         return (
-          <DashboardShell activeScreen="calendar" onNavigate={setCurrentScreen}>
+          <DashboardShell activeScreen="calendar" onNavigate={setCurrentScreen} onLogout={() => setCurrentScreen('landing')}>
             <CalendarScreen />
           </DashboardShell>
         );
       
       case 'agent':
         return (
-          <DashboardShell activeScreen="agent" onNavigate={setCurrentScreen}>
+          <DashboardShell activeScreen="agent" onNavigate={setCurrentScreen} onLogout={() => setCurrentScreen('landing')}>
             <AgentScreen />
           </DashboardShell>
         );
       
       case 'channels':
         return (
-          <DashboardShell activeScreen="channels" onNavigate={setCurrentScreen}>
+          <DashboardShell activeScreen="channels" onNavigate={setCurrentScreen} onLogout={() => setCurrentScreen('landing')}>
             <ChannelsScreen />
           </DashboardShell>
         );
       
       case 'settings':
         return (
-          <DashboardShell activeScreen="settings" onNavigate={setCurrentScreen}>
+          <DashboardShell activeScreen="settings" onNavigate={setCurrentScreen} onLogout={() => setCurrentScreen('landing')}>
             <SettingsScreen />
           </DashboardShell>
         );
@@ -1761,6 +2171,7 @@ export default function App() {
               <option value="landing">1. Landing</option>
               <option value="dashboard">2. Dashboard</option>
               <option value="new-post">3. Nueva publicación</option>
+              <option value="manual-post">3b. Subir publicación manual</option>
               <option value="drafts">4. Borradores</option>
               <option value="calendar">5. Calendario</option>
               <option value="agent">6. Agente IA</option>
