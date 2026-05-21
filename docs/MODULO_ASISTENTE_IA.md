@@ -1,0 +1,11 @@
+# Apartado: Asistente IA (dentro de CampusSocial)
+
+No es un proyecto aparte. Es una **pantalla** del producto CampusSocial.
+
+| Capa | Ubicación |
+|------|-----------|
+| UI | `Fontend/src/app/App.tsx` (pantalla `agent`, menú *Asistente IA*) |
+| Backend IA | `Backend/src/ai/` (`generateContent`, `chatWithAgent`) |
+| Historial | Firestore `chats/{uid}/mensajes` |
+
+El asistente redacta copy; la publicación en **LinkedIn** usa n8n/Postiz (`Backend/src/integracion/triggerN8nWorkflow.ts`).

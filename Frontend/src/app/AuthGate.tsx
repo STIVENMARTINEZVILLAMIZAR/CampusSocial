@@ -1,0 +1,117 @@
+import React, { useState } from 'react';
+import { ArrowLeft } from 'lucide-react';
+import { CampusSocialLogo } from './components/CampusSocialLogo';
+import { useAuth } from '../context/AuthContext';
+import { mensajeErrorAuth } from '../lib/authErrors';
+import App, { PublicLanding } from './App';
+
+/** Login + app; invitados ven landing primero */
+export default function AuthGate() {
+  const { user, loginEmail, registerEmail, loginGoogle, logout, initError } = useAuth();
+  const [guestView, setGuestView] = useState<'landing' | 'login'>('landing');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [mode, setMode] = useState<'login' | 'register'>('login');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  if (user) {
+    if (initError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center p-4 bg-slate-50">
+          <div className="max-w-md bg-white border rounded-2xl p-6 shadow-sm">
+            <p className="text-sm font-semibold text-red-600 mb-2">No se pudo preparar tu cuenta</p>
+            <p className="text-sm text-slate-600 mb-4">{initError}</p>
+            <button
+              type="button"
+              className="w-full py-2 rounded-xl border text-sm"
+              onClick={() => void logout()}
+            >
+              Cerrar sesión e intentar de nuevo
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return <App productionMode />;
+  }
+
+  if (guestView === 'landing') {
+    return <PublicLanding onLogin={() => setGuestView('login')} />;
+  }
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    try {
+      if (mode === 'login') await loginEmail(email, password);
+      else await registerEmail(email, password);
+    } catch (err) {
+      setError(mensajeErrorAuth(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-[#fafafa] to-slate-100 p-4">
+      <div className="w-full max-w-md bg-white border rounded-2xl p-8 shadow-sm relative">
+        <button
+          type="button"
+          onClick={() => setGuestView('landing')}
+          className="absolute left-6 top-6 flex items-center gap-1.5 text-sm text-slate-600 hover:text-[#667eea] transition-colors"
+          aria-label="Volver a inicio"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Inicio
+        </button>
+        <div className="mb-6 mt-8">
+          <CampusSocialLogo size="lg" textClassName="!text-foreground !bg-none" />
+        </div>
+        <p className="text-sm text-slate-500 mb-6">Automatización de redes con IA y n8n</p>
+        <form onSubmit={submit} className="space-y-4">
+          <input
+            type="email"
+            required
+            className="w-full border rounded-xl px-4 py-2 text-sm"
+            placeholder="Correo"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <input
+            type="password"
+            required
+            minLength={6}
+            className="w-full border rounded-xl px-4 py-2 text-sm"
+            placeholder="Contraseña"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+          {error && <p className="text-sm text-red-600">{error}</p>}
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-xl bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white font-medium disabled:opacity-60"
+          >
+            {loading ? '…' : mode === 'login' ? 'Entrar' : 'Crear cuenta'}
+          </button>
+        </form>
+        <button
+          type="button"
+          onClick={() => void loginGoogle()}
+          className="w-full mt-3 py-2 border rounded-xl text-sm"
+        >
+          Continuar con Google
+        </button>
+        <button
+          type="button"
+          className="w-full mt-4 text-sm text-[#667eea]"
+          onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+        >
+          {mode === 'login' ? 'Crear cuenta' : 'Ya tengo cuenta'}
+        </button>
+      </div>
+    </div>
+  );
+}

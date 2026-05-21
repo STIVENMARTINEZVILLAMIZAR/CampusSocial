@@ -1,0 +1,73 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'admin';
+    }
+
+    match /usuarios/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /publicaciones/{postId} {
+      allow read: if isSignedIn()
+        && (resource.data.creadoPor == request.auth.uid || isAdmin());
+      allow create: if isSignedIn()
+        && request.resource.data.creadoPor == request.auth.uid;
+      allow update, delete: if isSignedIn()
+        && (resource.data.creadoPor == request.auth.uid || isAdmin());
+    }
+
+    match /borradores/{draftId} {
+      allow read, update, delete: if isSignedIn()
+        && resource.data.usuarioId == request.auth.uid;
+      allow create: if isSignedIn()
+        && request.resource.data.usuarioId == request.auth.uid;
+    }
+
+    match /tokens_redes/{userId} {
+      allow read, write: if false;
+    }
+
+    match /chats/{userId}/mensajes/{messageId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /ejecuciones_n8n/{id} {
+      allow read: if isSignedIn() && resource.data.usuarioId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.usuarioId == request.auth.uid;
+      allow update: if isSignedIn() && resource.data.usuarioId == request.auth.uid;
+    }
+
+    match /canales/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /actividad/{id} {
+      allow read: if isSignedIn() && resource.data.usuarioId == request.auth.uid;
+      allow create: if isSignedIn() && request.resource.data.usuarioId == request.auth.uid;
+    }
+
+    match /configuracion/{userId} {
+      allow read, write: if isOwner(userId);
+    }
+
+    match /_meta/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+  }
+}

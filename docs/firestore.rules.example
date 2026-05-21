@@ -1,0 +1,17 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Copia estas reglas en la consola de Firebase → Firestore → Reglas.
+    // Ajusta según tus necesidades de administración.
+
+    match /users/{uid} {
+      // Perfil legible solo por el dueño (subcolección profile/data desde el cliente).
+      match /profile/{document=**} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+      match /drafts/{draftId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+  }
+}
