@@ -7,7 +7,7 @@ import {
   signOut,
   type User,
 } from 'firebase/auth';
-import { auth, googleProvider } from '../lib/firebase';
+import { auth, googleProvider, useAuthEmulator } from '../lib/firebase';
 import { inicializarCuentaUsuario, type Usuario } from '../lib/db';
 import { mensajeErrorAuth } from '../lib/authErrors';
 
@@ -48,8 +48,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (u) {
         try {
           await bootstrapFirestore(u);
-        } catch {
-          // initError ya asignado
+        } catch (err) {
+          if (useAuthEmulator) {
+            await signOut(auth);
+            setUser(null);
+          }
         }
       } else {
         setProfile(null);

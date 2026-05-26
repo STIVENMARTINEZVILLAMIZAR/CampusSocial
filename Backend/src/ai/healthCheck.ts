@@ -1,8 +1,9 @@
 import { onCall } from 'firebase-functions/v2/https';
-import { resolveAiProvider } from './aiProvider';
+import { getAiKeys, resolveAiProvider } from './aiProvider';
 
 /** Comprueba que Functions responde y si hay API de IA configurada */
 export const healthCheck = onCall({ region: 'us-central1' }, async () => {
+  const keys = getAiKeys();
   let ai = false;
   let provider = '';
   let aiError = '';
@@ -18,8 +19,12 @@ export const healthCheck = onCall({ region: 'us-central1' }, async () => {
     ai,
     provider,
     aiError,
+    hasAnthropic: Boolean(keys.anthropic),
+    hasGemini: Boolean(keys.gemini),
     hint: ai
-      ? 'IA lista'
-      : 'Crea Backend/.secret.local con ANTHROPIC_API_KEY o despliega secrets en Firebase',
+      ? keys.anthropic && keys.gemini
+        ? 'IA lista (Anthropic + Gemini; fallback automático)'
+        : 'IA lista'
+      : 'Crea Backend/.secret.local con ANTHROPIC_API_KEY o GEMINI_API_KEY',
   };
 });

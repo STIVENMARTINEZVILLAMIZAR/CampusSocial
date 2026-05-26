@@ -2,7 +2,25 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as logger from 'firebase-functions/logger';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { generateAiText } from './aiProvider';
+import { formatChatResponse } from './formatChatResponse';
+import { httpsErrorFrom } from './httpsErrorFrom';
 import type { ChatMessage } from '../types';
+
+const CHAT_INSTRUCTIONS = `
+Responde en español como CampusSocial (marketing Campus Lands).
+FORMATO OBLIGATORIO — TEXTO PLANO (sin markdown):
+- NO uses asteriscos (*), dobles asteriscos (**), almohadillas (#), guiones bajos (_) ni backticks.
+- Títulos de sección en una línea normal terminada en dos puntos, ejemplo: Ideas para Instagram:
+- Listas con guion y espacio al inicio de cada línea: - primer punto
+- Párrafos cortos separados por una línea en blanco.
+- Comillas normales "texto" si hace falta; sin símbolos de formato.
+- No escribas un bloque único muy largo; organiza por plataforma o por tema.
+- Si el usuario pide crear/publicar/redactar un post o das copy listo para publicar, termina con UNA sola línea JSON (sin markdown):
+{"accionSugerida":"generar_publicacion","temaSugerido":"tema corto en español","tono":"profesional"}
+- Otras acciones (una línea JSON al final si aplica):
+{"accionSugerida":"ver_calendario","temaSugerido":"","tono":""}
+- Si no hay acción: {"accionSugerida":null,"temaSugerido":"","tono":""}
+`;
 
 interface ChatRequest {
   mensaje: string;
@@ -12,7 +30,43 @@ interface ChatRequest {
 interface ChatResponse {
   respuesta: string;
   accionSugerida?: string;
+  temaSugerido?: string;
+  tonoSugerido?: string;
   provider?: string;
+}
+
+type ChatMeta = {
+  accionSugerida?: string;
+  temaSugerido?: string;
+  tonoSugerido?: string;
+};
+
+function parseChatMeta(raw: string): { text: string; meta: ChatMeta } {
+  const match = raw.match(/\{[\s\S]*"accionSugerida"[\s\S]*\}\s*$/);
+  if (!match) return { text: raw.trim(), meta: {} };
+  try {
+    const parsed = JSON.parse(match[0]) as Record<string, unknown>;
+    const accion = parsed.accionSugerida;
+    return {
+      text: formatChatResponse(raw.replace(match[0], '').trim()),
+      meta: {
+        accionSugerida:
+          accion === null || accion === 'null' || accion === undefined
+            ? undefined
+            : String(accion),
+        temaSugerido:
+          typeof parsed.temaSugerido === 'string' ? parsed.temaSugerido.trim() : undefined,
+        tonoSugerido:
+          typeof parsed.tono === 'string'
+            ? parsed.tono.trim()
+            : typeof parsed.tonoSugerido === 'string'
+              ? parsed.tonoSugerido.trim()
+              : undefined,
+      },
+    };
+  } catch {
+    return { text: formatChatResponse(raw), meta: {} };
+  }
 }
 
 export const chatWithAgent = onCall(
@@ -36,22 +90,18 @@ export const chatWithAgent = onCall(
         .map((m) => `${m.role === 'user' ? 'Usuario' : 'Asistente'}: ${m.content}`)
         .join('\n');
 
-      const prompt = `${historyText ? `Historial:\n${historyText}\n\n` : ''}Usuario: ${mensaje}
-
-Responde como CampusSocial, asistente de marketing para redes de Campus Lands.
-Si el usuario pide crear o programar un post, sugiere la acción en JSON al final:
-{"accionSugerida": "crear_borrador" | "programar_post" | "ver_calendario" | null}`;
+      const prompt = `${CHAT_INSTRUCTIONS}
+${historyText ? `\nHistorial:\n${historyText}\n` : ''}
+Usuario: ${mensaje}`;
 
       const { text: raw, provider } = await generateAiText(prompt);
 
-      let respuesta = raw.trim();
-      let accionSugerida: string | undefined;
-
-      const actionMatch = respuesta.match(/\{"accionSugerida"\s*:\s*"([^"]+)"\}/);
-      if (actionMatch) {
-        accionSugerida = actionMatch[1] === 'null' ? undefined : actionMatch[1];
-        respuesta = respuesta.replace(/\{"accionSugerida"[^}]+\}\s*$/, '').trim();
-      }
+      const { text: respuesta, meta } = parseChatMeta(raw);
+      const accionSugerida = meta.accionSugerida;
+      const temaSugerido =
+        meta.temaSugerido ||
+        (accionSugerida === 'generar_publicacion' ? mensaje.trim().slice(0, 200) : undefined);
+      const tonoSugerido = meta.tonoSugerido || 'profesional';
 
       await db.collection('chats').doc(uid).collection('mensajes').add({
         role: 'user',
@@ -62,14 +112,15 @@ Si el usuario pide crear o programar un post, sugiere la acción en JSON al fina
         role: 'model',
         content: respuesta,
         accionSugerida: accionSugerida ?? null,
+        temaSugerido: temaSugerido ?? null,
+        tonoSugerido: tonoSugerido ?? null,
         creadoEn: FieldValue.serverTimestamp(),
       });
 
-      return { respuesta, accionSugerida, provider };
+      return { respuesta, accionSugerida, temaSugerido, tonoSugerido, provider };
     } catch (err) {
       logger.error('chatWithAgent error', err);
-      const msg = err instanceof Error ? err.message : 'Error en el chat';
-      throw new HttpsError('internal', msg);
+      throw httpsErrorFrom(err);
     }
   }
 );

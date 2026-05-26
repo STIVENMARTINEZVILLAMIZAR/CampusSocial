@@ -11,8 +11,8 @@ __pycache__/
 .env.*.local
 !.env.example
 .env.CampusSocial
-legacy/**/.env*
 legacy/**/.env.CampusSocial
+!legacy/flask-backend/.env.CampusSocial.example
 Backend/.secret.local
 **/.secret.local
 

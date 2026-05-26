@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import {
   Sparkles, Calendar, FileText, Settings,
   Home, PenSquare, MessageSquare, Share2,
@@ -7,14 +7,14 @@ import {
   Clock, Trash2, Edit, Send, Plus,
   Zap, Network, BarChart3, CheckCircle2,
   ArrowRight, Play, Eye, Save, Loader2,
-  Filter, Copy, Download, Mail, LogOut, Contrast,
+  Filter, Copy, Download, Mail, LogOut, Moon, Sun,
   User, ChevronLeft,
   Upload, Image, Video, FileUp, CalendarClock,
   AlarmClock, Globe, ChevronRight, Info
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
-import { ejecutarFlujoPublicacion } from '../services/n8n';
+import { ejecutarFlujoPublicacion, getAutomationWebhookUrl } from '../services/make';
 import {
   chatWithAgent,
   generateContent as generateContentFn,
@@ -26,6 +26,7 @@ import {
   crearBorrador,
   eliminarBorrador,
   eliminarPublicacion,
+  actualizarPublicacion,
   registrarActividad,
   guardarCanal,
 } from '../lib/db';
@@ -46,8 +47,12 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import { subirArchivoPublicacion } from '../lib/storage';
 import { mensajeCallable } from '../lib/callableError';
+import { ChatMessageBody } from './components/ChatMessageBody';
+import { SocialPostPreview } from './components/SocialPostPreview';
+import { ConnectChannelModal } from './components/ConnectChannelModal';
 import { healthCheck } from '../services/cloudFunctions';
 import { toDate, formatRelative, formatDateTime } from '../lib/format';
+import { consumePostDraftFromAgent, savePostDraftFromAgent } from '../lib/postDraftBridge';
 
 // ============================================================================
 // DESIGN SYSTEM - COMPONENTES REUTILIZABLES
@@ -502,8 +507,8 @@ const LandingPage: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNav
               </div>
               <h3 className="text-xl font-semibold">Automatización n8n</h3>
               <p className="text-muted-foreground">
-                Conecta tu flujo de trabajo con cientos de herramientas. 
-                Automatiza aprobaciones, notificaciones y más con n8n integrado.
+                Conecta tu flujo con Docker local (gratis). 
+                Automatiza aprobaciones, notificaciones y publicación con tu JSON de workflow.
               </p>
               <ul className="space-y-2">
                 <li className="flex items-center gap-2 text-sm">
@@ -618,7 +623,7 @@ const DashboardShell: React.FC<{
   onLogout?: () => void;
 }> = ({ children, activeScreen, onNavigate, onLogout }) => {
   const { profile, user } = useAuth();
-  const { mode, toggleContrast } = useTheme();
+  const { mode, toggleTheme } = useTheme();
   const { data: actividad = [] } = useActividad();
   const [searchTerm, setSearchTerm] = useState('');
   const [showNotif, setShowNotif] = useState(false);
@@ -729,11 +734,15 @@ const DashboardShell: React.FC<{
           <div className="flex items-center gap-2">
             <button
               type="button"
-              title={mode === 'high-contrast' ? 'Contraste normal' : 'Alto contraste'}
-              onClick={toggleContrast}
+              title={mode === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+              onClick={toggleTheme}
               className="p-2 hover:bg-accent rounded-xl transition-colors"
             >
-              <Contrast className="w-5 h-5 text-muted-foreground" />
+              {mode === 'dark' ? (
+                <Sun className="w-5 h-5 text-muted-foreground" />
+              ) : (
+                <Moon className="w-5 h-5 text-muted-foreground" />
+              )}
             </button>
             <div className="relative">
               <button
@@ -811,6 +820,7 @@ const NewPostScreen: React.FC = () => {
   const { data: config } = useConfiguracion();
   const invalidate = useInvalidateCampus();
   const initials = (profile?.nombre || user?.email || 'U').slice(0, 2).toUpperCase();
+  const agentDraftApplied = useRef(false);
   const [topic, setTopic] = useState('');
   const [tone, setTone] = useState('profesional');
   const [networks, setNetworks] = useState({
@@ -831,6 +841,8 @@ const NewPostScreen: React.FC = () => {
   const [repeatMode, setRepeatMode] = useState('none');
   const [scheduleMode, setScheduleMode] = useState<'now' | 'schedule'>('schedule');
   const [generatedText, setGeneratedText] = useState('');
+  const [imagenNota, setImagenNota] = useState('');
+  const [imagenUrl, setImagenUrl] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
   const platformsSelected = (): RedSocial[] =>
@@ -839,39 +851,56 @@ const NewPostScreen: React.FC = () => {
       .map(([k]) => k)
       .filter((k): k is RedSocial => REDES.includes(k as RedSocial)));
 
-  const handleGenerate = async () => {
-    if (!topic.trim() || !user) return;
-    setIsGenerating(true);
-    setErrorMsg('');
-    try {
-      const platforms: RedSocial[] = platformsSelected().length
-        ? platformsSelected()
-        : ['linkedin'];
+  const runGenerate = useCallback(
+    async (topicText: string, toneText: string) => {
+      if (!topicText.trim() || !user) return;
+      setIsGenerating(true);
+      setErrorMsg('');
+      try {
+        const platforms: RedSocial[] = platformsSelected().length
+          ? platformsSelected()
+          : ['linkedin'];
 
-      const gen = await generateContentFn(topic.trim(), platforms[0], tone, generateImage);
+        const gen = await generateContentFn(
+          topicText.trim(),
+          platforms[0],
+          toneText,
+          generateImage
+        );
       const tags = gen.hashtags.map((h) => (h.startsWith('#') ? h : `#${h}`)).join(' ');
       setGeneratedText([gen.contenido, tags].filter(Boolean).join('\n\n'));
+      setImagenUrl(gen.imagenUrl ?? '');
+      setImagenNota(gen.imagenNota ?? '');
       setHasContent(true);
-      setToastMsg(gen.provider ? `Generado con ${gen.provider}` : 'Contenido generado');
+      const extra = gen.imagenGenerada
+        ? ' · con imagen IA'
+        : gen.imagenNota
+          ? ' · imagen: manual/Make'
+          : '';
+      setToastMsg(
+        (gen.provider ? `Generado con ${gen.provider}` : 'Contenido generado') + extra
+      );
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
 
-      const webhook = config?.n8nWebhookUrl?.trim();
+      const webhook = getAutomationWebhookUrl(config);
       if (webhook) {
         try {
           await ejecutarFlujoPublicacion(
             {
-              topic: topic.trim(),
-              tone,
+              topic: topicText.trim(),
+              tone: toneText,
               include_image: generateImage,
               telegram_notify: false,
               schedule_now: false,
               platforms,
+              body: [gen.contenido, tags].filter(Boolean).join('\n\n'),
+              image_url: gen.imagenUrl ?? null,
             },
             webhook
           );
         } catch {
-          // n8n opcional; la IA ya generó el texto
+          // n8n opcional; la IA ya generó el texto en CampusSocial
         }
       }
     } catch (e) {
@@ -879,7 +908,25 @@ const NewPostScreen: React.FC = () => {
     } finally {
       setIsGenerating(false);
     }
-  };
+  },
+    [user, tone, generateImage, config, networks, platformsSelected]
+  );
+
+  const handleGenerate = () => void runGenerate(topic, tone);
+
+  useEffect(() => {
+    if (agentDraftApplied.current || !user) return;
+    const draft = consumePostDraftFromAgent();
+    if (!draft) return;
+    agentDraftApplied.current = true;
+    setTopic(draft.topic);
+    setTone(draft.tone);
+    if (draft.autoGenerate) {
+      setToastMsg('Creando publicación desde el Asistente IA…');
+      setShowToast(true);
+      void runGenerate(draft.topic, draft.tone);
+    }
+  }, [user, runGenerate]);
 
   const handleSaveBorrador = async () => {
     if (!user || !generatedText.trim()) return;
@@ -930,7 +977,7 @@ const NewPostScreen: React.FC = () => {
         setToastMsg('Publicación enviada');
       } else {
         const iso = new Date(`${scheduledDate}T${scheduledTime}`).toISOString();
-        const webhook = config?.n8nWebhookUrl?.trim();
+        const webhook = getAutomationWebhookUrl(config);
         if (webhook) {
           try {
             await ejecutarFlujoPublicacion(
@@ -941,6 +988,8 @@ const NewPostScreen: React.FC = () => {
                 telegram_notify: false,
                 schedule_now: true,
                 platforms,
+                body: generatedText || topic,
+                image_url: imagenUrl || null,
               },
               webhook
             );
@@ -1085,7 +1134,9 @@ const NewPostScreen: React.FC = () => {
             <div className="space-y-4 h-full flex flex-col">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Vista previa</h3>
-                <Badge variant="purple">LinkedIn</Badge>
+                <Badge variant="purple">
+                  {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+                </Badge>
               </div>
 
               {/* Network Tabs */}
@@ -1150,41 +1201,19 @@ const NewPostScreen: React.FC = () => {
 
                 {hasContent && !isGenerating && (
                   <div className="space-y-4">
-                    {/* LinkedIn Post Mock */}
-                    <div className="bg-white border border-border rounded-xl p-4 space-y-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center text-white font-semibold">
-                          {initials}
-                        </div>
-                        <div>
-                          <div className="font-semibold text-sm">{profile?.nombre || 'Cuenta'}</div>
-                          <div className="text-xs text-muted-foreground">Educación Tecnológica • Hace 1m</div>
-                        </div>
-                      </div>
-                      <p className="text-sm whitespace-pre-wrap text-foreground leading-relaxed">
-                        {generatedText}
+                    <SocialPostPreview
+                      network={(activeTab as RedSocial) || 'linkedin'}
+                      authorName={displayName}
+                      authorInitials={initials}
+                      content={generatedText}
+                      imageUrl={generateImage ? imagenUrl : null}
+                      charLimit={3000}
+                    />
+                    {generateImage && imagenNota && (
+                      <p className="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2">
+                        {imagenNota}
                       </p>
-                      <div className="bg-gradient-to-br from-purple-100 to-indigo-100 rounded-xl h-64 flex items-center justify-center">
-                        <div className="text-center space-y-2">
-                          <div className="w-16 h-16 bg-gradient-to-br from-[#667eea] to-[#764ba2] rounded-full flex items-center justify-center mx-auto">
-                            <Sparkles className="w-8 h-8 text-white" />
-                          </div>
-                          <p className="text-sm font-medium text-purple-900">Imagen generada por IA</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4 pt-2 border-t border-border text-xs text-muted-foreground">
-                        <span>👍 245 reacciones</span>
-                        <span>💬 18 comentarios</span>
-                        <span>🔄 32 compartidos</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between p-3 bg-accent rounded-xl">
-                      <span className="text-sm text-muted-foreground">Caracteres</span>
-                      <span className="text-sm font-medium">
-                        {generatedText.length} / 3000
-                      </span>
-                    </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1609,28 +1638,15 @@ const ManualPostScreen: React.FC = () => {
                         </button>
                       ))}
                     </div>
-                    <div className="bg-white border border-border rounded-xl p-4 space-y-3 max-h-64 overflow-y-auto">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center text-white font-semibold text-xs shrink-0">CL</div>
-                        <div>
-                          <div className="text-xs font-semibold">Campus Lands</div>
-                          <div className="text-[11px] text-muted-foreground">Ahora</div>
-                        </div>
-                      </div>
-                      <p className="text-xs whitespace-pre-wrap leading-relaxed text-foreground">
-                        {postText || <span className="text-muted-foreground italic">El texto aparecerá aquí...</span>}
-                      </p>
-                      {uploadedFiles.length > 0 && uploadedFiles[0].preview && (
-                        <img src={uploadedFiles[0].preview} className="w-full rounded-lg object-cover max-h-32" alt="preview" />
-                      )}
-                      {uploadedFiles.length > 0 && !uploadedFiles[0].preview && (
-                        <div className="bg-accent rounded-lg h-16 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                          <Video className="w-4 h-4" />{uploadedFiles[0].name}
-                        </div>
-                      )}
-                    </div>
-                    <div className={`text-xs text-right font-medium ${postText.length > charLimits[activePreview] ? 'text-destructive' : 'text-muted-foreground'}`}>
-                      {postText.length} / {charLimits[activePreview]} caracteres
+                    <div className="max-h-[420px] overflow-y-auto">
+                      <SocialPostPreview
+                        network={activePreview}
+                        authorName="Campus Lands"
+                        authorInitials="CL"
+                        content={postText}
+                        imageUrl={uploadedFiles[0]?.preview ?? null}
+                        charLimit={charLimits[activePreview]}
+                      />
                     </div>
                   </>
                 ) : (
@@ -1835,6 +1851,9 @@ const CalendarScreen: React.FC = () => {
   const now = new Date();
   const [viewDate, setViewDate] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
   const [selectedDay, setSelectedDay] = useState<number | null>(now.getDate());
+  const [draggingPostId, setDraggingPostId] = useState<string | null>(null);
+  const [dropTargetDay, setDropTargetDay] = useState<number | null>(null);
+  const [moving, setMoving] = useState(false);
   const mes = viewDate.getMonth();
   const anio = viewDate.getFullYear();
   const { porDia, isLoading } = usePublicacionesProgramadas(mes, anio);
@@ -1845,12 +1864,41 @@ const CalendarScreen: React.FC = () => {
 
   const selectedPosts = selectedDay ? porDia[selectedDay] ?? [] : [];
 
+  const allPostsInMonth = useMemo(
+    () => Object.values(porDia).flat(),
+    [porDia]
+  );
+
+  const reprogramarEnDia = async (postId: string, targetDay: number) => {
+    const post = allPostsInMonth.find((p) => p.id === postId);
+    if (!post?.fechaProgramada) return;
+    const prev = toDate(post.fechaProgramada);
+    const nueva = new Date(anio, mes, targetDay, prev.getHours(), prev.getMinutes(), 0, 0);
+    setMoving(true);
+    try {
+      await actualizarPublicacion(postId, { fechaProgramada: nueva });
+      await registrarActividad(user!.uid, {
+        tipo: 'programado',
+        mensaje: `Reprogramado al ${nueva.toLocaleDateString('es-CO')}`,
+        red: post.redesDestino[0],
+      });
+      invalidate();
+      setSelectedDay(targetDay);
+    } finally {
+      setMoving(false);
+      setDraggingPostId(null);
+      setDropTargetDay(null);
+    }
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold mb-2">Calendario Editorial</h1>
-          <p className="text-muted-foreground">Visualiza y organiza tus publicaciones programadas</p>
+          <p className="text-muted-foreground">
+            Visualiza y organiza tus publicaciones programadas. Arrastra una publicación a otro día para reprogramarla.
+          </p>
         </div>
         <Button variant="primary" icon={<Plus />}>
           Nueva publicación
@@ -1894,10 +1942,21 @@ const CalendarScreen: React.FC = () => {
               return (
                 <button
                   key={day}
+                  type="button"
                   onClick={() => setSelectedDay(day)}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDropTargetDay(day);
+                  }}
+                  onDragLeave={() => setDropTargetDay((d) => (d === day ? null : d))}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (draggingPostId && user) void reprogramarEnDia(draggingPostId, day);
+                  }}
                   className={`aspect-square p-2 rounded-xl border transition-all relative
-                    ${isSelected ? 'border-purple-500 bg-purple-50' : 'border-border hover:border-purple-300'}
-                    ${hasContent ? 'bg-purple-50/50' : 'bg-card'}
+                    ${isSelected ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'}
+                    ${dropTargetDay === day && draggingPostId ? 'ring-2 ring-primary ring-offset-2' : ''}
+                    ${hasContent ? 'bg-primary/5' : 'bg-card'}
                   `}
                 >
                   <div className="text-sm font-medium">{day}</div>
@@ -1928,9 +1987,20 @@ const CalendarScreen: React.FC = () => {
                 const fp = toDate(post.fechaProgramada);
                 const red = post.redesDestino[0];
                 return (
-                <div key={post.id} className="p-3 bg-accent/50 rounded-xl hover:bg-accent transition-colors">
+                <div
+                  key={post.id}
+                  draggable={!moving}
+                  onDragStart={() => setDraggingPostId(post.id)}
+                  onDragEnd={() => {
+                    setDraggingPostId(null);
+                    setDropTargetDay(null);
+                  }}
+                  className={`p-3 bg-accent/50 rounded-xl hover:bg-accent transition-colors cursor-grab active:cursor-grabbing
+                    ${draggingPostId === post.id ? 'opacity-50 ring-2 ring-primary' : ''}`}
+                  title="Arrastra al calendario para cambiar la fecha"
+                >
                   {post.imagenUrl && (
-                    <img src={post.imagenUrl} alt="" className="w-full h-24 object-cover rounded-lg mb-2" />
+                    <img src={post.imagenUrl} alt="" className="w-full h-24 object-cover rounded-lg mb-2 pointer-events-none" />
                   )}
                   <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{post.contenido}</p>
                   <div className="flex items-start justify-between mb-2">
@@ -1979,16 +2049,35 @@ const CalendarScreen: React.FC = () => {
 // PANTALLA 6: AGENTE IA (Chat Gemini)
 // ============================================================================
 
-const AgentScreen: React.FC = () => {
+type AgentChatMessage = {
+  role: 'user' | 'bot';
+  text: string;
+  accionSugerida?: string;
+  temaSugerido?: string;
+  tonoSugerido?: string;
+};
+
+const AgentScreen: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   const { user } = useAuth();
   const invalidate = useInvalidateCampus();
   const { data: stored = [], isLoading } = useChatMensajes();
-  const [messages, setMessages] = useState<{ role: 'user' | 'bot'; text: string }[]>([]);
+  const [messages, setMessages] = useState<AgentChatMessage[]>([]);
+  const [lastUserPrompt, setLastUserPrompt] = useState('');
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [backendOk, setBackendOk] = useState<boolean | null>(null);
   const [aiHint, setAiHint] = useState('');
+
+  const irAGenerarPublicacion = (tema: string, tono = 'profesional') => {
+    const topic = tema.trim() || lastUserPrompt.trim();
+    if (!topic) {
+      setError('Escribe un tema en el chat o pide ideas de publicación primero.');
+      return;
+    }
+    savePostDraftFromAgent({ topic, tone: tono, autoGenerate: true });
+    onNavigate('new-post');
+  };
 
   useEffect(() => {
     healthCheck()
@@ -2010,13 +2099,16 @@ const AgentScreen: React.FC = () => {
         stored.map((m) => ({
           role: m.role === 'user' ? 'user' : 'bot',
           text: m.content,
+          accionSugerida: m.accionSugerida ?? undefined,
+          temaSugerido: m.temaSugerido ?? undefined,
+          tonoSugerido: m.tonoSugerido ?? undefined,
         }))
       );
     } else if (!isLoading) {
       setMessages([
         {
           role: 'bot',
-          text: '¡Hola! Soy el asistente de CampusSocial. Puedo ayudarte con copy para LinkedIn y tus publicaciones.',
+          text: '¡Hola! Soy el asistente de CampusSocial. Puedo ayudarte con ideas y copy. Cuando tengas un tema listo, usa Generar publicación para abrir Nueva publicación y crear el borrador automáticamente.',
         },
       ]);
     }
@@ -2035,7 +2127,8 @@ const AgentScreen: React.FC = () => {
     setInput('');
     setSending(true);
     setError('');
-    const userMsg = { role: 'user' as const, text };
+    setLastUserPrompt(text);
+    const userMsg: AgentChatMessage = { role: 'user', text };
     setMessages((prev) => [...prev, userMsg]);
     try {
       const historial = messages.slice(-10).map((m) => ({
@@ -2043,7 +2136,14 @@ const AgentScreen: React.FC = () => {
         content: m.text,
       }));
       const res = await chatWithAgent(text, historial);
-      setMessages((prev) => [...prev, { role: 'bot', text: res.respuesta }]);
+      const botMsg: AgentChatMessage = {
+        role: 'bot',
+        text: res.respuesta,
+        accionSugerida: res.accionSugerida,
+        temaSugerido: res.temaSugerido,
+        tonoSugerido: res.tonoSugerido,
+      };
+      setMessages((prev) => [...prev, botMsg]);
       setError('');
       setBackendOk(true);
       invalidate();
@@ -2080,14 +2180,38 @@ const AgentScreen: React.FC = () => {
           {/* Messages */}
           <div className="flex-1 overflow-y-auto space-y-4 mb-4">
             {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              <div key={i} className={`flex flex-col gap-2 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                 <div className={`max-w-[80%] px-4 py-3 rounded-2xl whitespace-pre-wrap ${
                   msg.role === 'user' 
                     ? 'bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white ml-auto' 
                     : 'bg-accent text-foreground'
                 }`}>
-                  <p className="text-sm leading-relaxed">{msg.text}</p>
+                  {msg.role === 'bot' ? (
+                    <ChatMessageBody text={msg.text} />
+                  ) : (
+                    <p className="text-sm leading-relaxed">{msg.text}</p>
+                  )}
                 </div>
+                {msg.role === 'bot' && msg.accionSugerida === 'generar_publicacion' && (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    icon={<PenSquare className="w-4 h-4" />}
+                    onClick={() =>
+                      irAGenerarPublicacion(
+                        msg.temaSugerido || lastUserPrompt,
+                        msg.tonoSugerido || 'profesional'
+                      )
+                    }
+                  >
+                    Generar publicación
+                  </Button>
+                )}
+                {msg.role === 'bot' && msg.accionSugerida === 'ver_calendario' && (
+                  <Button variant="outline" size="sm" icon={<Calendar className="w-4 h-4" />} onClick={() => onNavigate('calendar')}>
+                    Ver calendario
+                  </Button>
+                )}
               </div>
             ))}
           </div>
@@ -2111,6 +2235,17 @@ const AgentScreen: React.FC = () => {
         {/* Quick Actions Sidebar */}
         <Card>
           <h3 className="font-semibold mb-4">Acciones rápidas</h3>
+          <Button
+            variant="primary"
+            className="w-full mb-4"
+            icon={<Sparkles />}
+            onClick={() => irAGenerarPublicacion(lastUserPrompt || input || 'Publicación Campus Lands')}
+          >
+            Generar publicación
+          </Button>
+          <p className="text-xs text-muted-foreground mb-3">
+            Abre Nueva publicación con el tema del chat y genera el borrador con IA automáticamente.
+          </p>
           <div className="space-y-2">
             {quickActions.map((action, i) => (
               <button
@@ -2147,6 +2282,7 @@ const ChannelsScreen: React.FC = () => {
   const invalidate = useInvalidateCampus();
   const { data: canales, isLoading } = useCanales();
   const { stats } = useDashboardStats();
+  const [connectModal, setConnectModal] = useState<{ red: RedSocial; name: string } | null>(null);
 
   const defs = [
     { id: 'linkedin' as RedSocial, name: 'LinkedIn', icon: <Linkedin className="w-6 h-6 text-blue-600" />, color: 'bg-blue-50 border-blue-200' },
@@ -2236,27 +2372,7 @@ const ChannelsScreen: React.FC = () => {
                   variant="primary"
                   size="sm"
                   className="w-full"
-                  onClick={async () => {
-                    if (!user) return;
-                    const name = prompt(
-                      `Cuenta de ${channel.name}:\n\n` +
-                        (channel.id === 'linkedin'
-                          ? 'LinkedIn se publica vía Postiz/n8n. Indica el nombre del perfil conectado en tu workflow.'
-                          : 'Indica el usuario o página conectada en n8n.')
-                    );
-                    if (!name) return;
-                    await guardarCanal(user.uid, channel.id, {
-                      conectado: true,
-                      cuentaNombre: name,
-                      proveedor: channel.id === 'linkedin' ? 'postiz' : 'n8n',
-                    });
-                    await registrarActividad(user.uid, {
-                      tipo: 'publicado',
-                      mensaje: `Canal ${channel.name} vinculado: ${name}`,
-                      red: channel.id as RedSocial,
-                    });
-                    invalidate();
-                  }}
+                  onClick={() => setConnectModal({ red: channel.id, name: channel.name })}
                 >
                   Conectar cuenta
                 </Button>
@@ -2283,6 +2399,22 @@ const ChannelsScreen: React.FC = () => {
           <p className="text-sm text-muted-foreground mt-1">Posts programados</p>
         </Card>
       </div>
+
+      <ConnectChannelModal
+        isOpen={Boolean(connectModal)}
+        onClose={() => setConnectModal(null)}
+        channelName={connectModal?.name ?? ''}
+        red={connectModal?.red ?? 'linkedin'}
+        onSuccess={async (data) => {
+          if (!user || !connectModal) return;
+          await registrarActividad(user.uid, {
+            tipo: 'publicado',
+            mensaje: `Canal ${connectModal.name} verificado: ${data.cuentaNombre}`,
+            red: connectModal.red,
+          });
+          invalidate();
+        }}
+      />
     </div>
   );
 };
@@ -2295,7 +2427,7 @@ const SettingsScreen: React.FC = () => {
   const { user } = useAuth();
   const invalidate = useInvalidateCampus();
   const { data: config, isLoading } = useConfiguracion();
-  const [n8nWebhook, setN8nWebhook] = useState('');
+  const [automationWebhook, setAutomationWebhook] = useState('');
   const [notifications, setNotifications] = useState(true);
   const [timezone, setTimezone] = useState('America/Bogota');
   const [saving, setSaving] = useState(false);
@@ -2304,7 +2436,7 @@ const SettingsScreen: React.FC = () => {
 
   useEffect(() => {
     if (config) {
-      setN8nWebhook(config.n8nWebhookUrl ?? '');
+      setAutomationWebhook(getAutomationWebhookUrl(config));
       setNotifications(config.notifications ?? true);
       setTimezone(config.timezone ?? 'America/Bogota');
     }
@@ -2328,24 +2460,24 @@ const SettingsScreen: React.FC = () => {
           </p>
         </Card>
 
-        {/* n8n Webhook */}
+        {/* n8n / Make Webhook */}
         <Card>
           <h3 className="font-semibold mb-4 flex items-center gap-2">
             <Network className="w-5 h-5 text-emerald-600" />
-            Automatización n8n
+            Automatización n8n (Docker)
           </h3>
           <div className="space-y-4">
             <Input
-              label="Webhook URL"
-              value={n8nWebhook}
-              onChange={(e) => setN8nWebhook(e.target.value)}
-              placeholder="https://your-n8n.com/webhook/..."
+              label="URL del webhook"
+              value={automationWebhook}
+              onChange={(e) => setAutomationWebhook(e.target.value)}
+              placeholder="https://tu-id.ngrok-free.dev/webhook/campus-post-form"
             />
             <p className="text-xs text-muted-foreground">
-              El secret del webhook se define en Cloud Functions (N8N_WEBHOOK_SECRET).
+              Secreto en Backend: N8N_WEBHOOK_SECRET (header X-Campus-Secret). Guía: docs/N8N_DOCKER.md
             </p>
             <p className="text-xs text-muted-foreground">
-              Configura tu workflow en n8n y pega la URL del webhook aquí
+              Local: <code className="text-xs">cd Flujo_Automatizacion &amp;&amp; docker compose up -d</code> → importar JSON → activar workflow.
             </p>
           </div>
         </Card>
@@ -2389,7 +2521,8 @@ const SettingsScreen: React.FC = () => {
                   }
                 }
                 await guardarConfiguracion(user.uid, {
-                  n8nWebhookUrl: n8nWebhook.trim(),
+                  n8nWebhookUrl: automationWebhook.trim(),
+                  makeWebhookUrl: automationWebhook.trim(),
                   notifications,
                   timezone,
                 });
@@ -2551,7 +2684,7 @@ export default function App({ productionMode = false }: { productionMode?: boole
       case 'agent':
         return (
           <DashboardShell activeScreen="agent" onNavigate={setCurrentScreen} onLogout={() => logout()}>
-            <AgentScreen />
+            <AgentScreen onNavigate={setCurrentScreen} />
           </DashboardShell>
         );
       

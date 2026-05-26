@@ -10,10 +10,21 @@ export async function healthCheck() {
   return res.data;
 }
 
-export async function chatWithAgent(mensaje: string, historial: { role: 'user' | 'model'; content: string }[]) {
+export type ChatAgentResponse = {
+  respuesta: string;
+  accionSugerida?: string;
+  temaSugerido?: string;
+  tonoSugerido?: string;
+  provider?: string;
+};
+
+export async function chatWithAgent(
+  mensaje: string,
+  historial: { role: 'user' | 'model'; content: string }[]
+): Promise<ChatAgentResponse> {
   const fn = httpsCallable<
     { mensaje: string; historial?: { role: 'user' | 'model'; content: string }[] },
-    { respuesta: string; accionSugerida?: string }
+    ChatAgentResponse
   >(functions, 'chatWithAgent');
   const res = await fn({ mensaje, historial });
   return res.data;
@@ -27,7 +38,15 @@ export async function generateContent(
 ) {
   const fn = httpsCallable<
     { prompt: string; redSocial: string; tono: string; generarImagen?: boolean },
-    { contenido: string; hashtags: string[]; variaciones: string[]; provider?: string }
+    {
+      contenido: string;
+      hashtags: string[];
+      variaciones: string[];
+      provider?: string;
+      imagenGenerada?: boolean;
+      imagenUrl?: string;
+      imagenNota?: string;
+    }
   >(functions, 'generateContent');
   const res = await fn({ prompt, redSocial, tono, generarImagen });
   return res.data;
@@ -48,5 +67,19 @@ export async function publishPostNow(postId: string) {
     'publishPostNow'
   );
   const res = await fn({ postId });
+  return res.data;
+}
+
+export async function verifyChannelConnection(input: {
+  red: string;
+  integrationId?: string;
+  profileUrl?: string;
+  cuentaNombre?: string;
+}) {
+  const fn = httpsCallable<
+    typeof input,
+    { ok: boolean; cuentaNombre: string; integrationId?: string; verificadoPor?: string }
+  >(functions, 'verifyChannelConnection');
+  const res = await fn(input);
   return res.data;
 }

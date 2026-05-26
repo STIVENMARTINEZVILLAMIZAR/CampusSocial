@@ -45,8 +45,27 @@ export default function AuthGate() {
     setLoading(true);
     setError('');
     try {
-      if (mode === 'login') await loginEmail(email, password);
-      else await registerEmail(email, password);
+      const mail = email.trim();
+      const pass = password;
+      if (!mail || !pass) {
+        setError('Correo y contraseña son obligatorios.');
+        setLoading(false);
+        return;
+      }
+      if (mode === 'login') await loginEmail(mail, pass);
+      else await registerEmail(mail, pass);
+    } catch (err) {
+      setError(mensajeErrorAuth(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogle = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      await loginGoogle();
     } catch (err) {
       setError(mensajeErrorAuth(err));
     } finally {
@@ -69,7 +88,7 @@ export default function AuthGate() {
         <div className="mb-6 mt-8">
           <CampusSocialLogo size="lg" textClassName="!text-foreground !bg-none" />
         </div>
-        <p className="text-sm text-slate-500 mb-6">Automatización de redes con IA y n8n</p>
+        <p className="text-sm text-slate-500 mb-6">Automatización de redes con IA y Make</p>
         <form onSubmit={submit} className="space-y-4">
           <input
             type="email"
@@ -99,8 +118,9 @@ export default function AuthGate() {
         </form>
         <button
           type="button"
-          onClick={() => void loginGoogle()}
-          className="w-full mt-3 py-2 border rounded-xl text-sm"
+          disabled={loading}
+          onClick={() => void handleGoogle()}
+          className="w-full mt-3 py-2 border rounded-xl text-sm disabled:opacity-60"
         >
           Continuar con Google
         </button>

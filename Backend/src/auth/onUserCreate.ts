@@ -57,6 +57,7 @@ export const onAuthUserCreate = functions
     if (!configSnap.exists) {
       await configRef.set({
         usuarioId: uid,
+        makeWebhookUrl: '',
         n8nWebhookUrl: '',
         notifications: true,
         timezone: 'America/Bogota',

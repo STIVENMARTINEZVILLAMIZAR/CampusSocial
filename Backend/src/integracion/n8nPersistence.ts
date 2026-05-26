@@ -1,9 +1,9 @@
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
-import type { N8nCampusPostPayload } from './n8nTypes';
+import type { AutomationPostPayload } from './automationTypes';
 
 export async function crearBorradorEnFirestore(
   uid: string,
-  payload: N8nCampusPostPayload
+  payload: AutomationPostPayload
 ): Promise<string> {
   const db = getFirestore();
   const ref = await db.collection('borradores').add({
@@ -22,7 +22,7 @@ export async function crearBorradorEnFirestore(
 
 export async function registrarEjecucion(
   uid: string,
-  payload: N8nCampusPostPayload,
+  payload: AutomationPostPayload,
   borradorId: string
 ): Promise<string> {
   const db = getFirestore();

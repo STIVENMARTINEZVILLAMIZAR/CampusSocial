@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-type ThemeMode = 'default' | 'high-contrast';
+export type ThemeMode = 'light' | 'dark';
 
 type ThemeState = {
   mode: ThemeMode;
-  toggleContrast: () => void;
+  toggleTheme: () => void;
+  setTheme: (mode: ThemeMode) => void;
 };
 
 const ThemeCtx = createContext<ThemeState | null>(null);
@@ -13,20 +14,21 @@ const STORAGE_KEY = 'campus-social-theme';
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mode, setMode] = useState<ThemeMode>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved === 'high-contrast' ? 'high-contrast' : 'default';
+    if (saved === 'dark' || saved === 'light') return saved;
+    return 'light';
   });
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', mode);
+    const root = document.documentElement;
+    root.setAttribute('data-theme', mode);
+    root.classList.toggle('dark', mode === 'dark');
     localStorage.setItem(STORAGE_KEY, mode);
   }, [mode]);
 
-  const toggleContrast = () => {
-    setMode((m) => (m === 'high-contrast' ? 'default' : 'high-contrast'));
-  };
+  const toggleTheme = () => setMode((m) => (m === 'dark' ? 'light' : 'dark'));
 
   return (
-    <ThemeCtx.Provider value={{ mode, toggleContrast }}>
+    <ThemeCtx.Provider value={{ mode, toggleTheme, setTheme: setMode }}>
       {children}
     </ThemeCtx.Provider>
   );

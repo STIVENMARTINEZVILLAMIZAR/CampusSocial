@@ -39,4 +39,6 @@ export interface GenerateContentResponse {
   variaciones: string[];
   provider?: string;
   imagenGenerada?: boolean;
+  imagenUrl?: string;
+  imagenNota?: string;
 }

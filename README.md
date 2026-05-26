@@ -1,30 +1,38 @@
 # CampusSocial
 
-Automatización de publicaciones en redes para **Campus Lands**, con foco en **LinkedIn** (Postiz + n8n) e **Asistente IA** (Gemini) como un apartado más de la app.
+Automatización de publicaciones en redes para **Campus Lands**, con foco en **LinkedIn** (Postiz + **Make**) e **Asistente IA** (Gemini) como un apartado más de la app.
 
 ## Estructura
 
 | Carpeta | Rol |
 |---------|-----|
-| **`Fontend/`** | App React CampusSocial (UI + Firebase cliente) |
-| **`Backend/`** | Cloud Functions (IA, posts, n8n, LinkedIn) |
+| **`Frontend/`** | App React CampusSocial (UI + Firebase cliente) |
+| **`Backend/`** | Cloud Functions (IA, posts, Make, LinkedIn) |
 | **`docs/`** | Documentación (Firestore, arquitectura, módulo IA) |
 | **`legacy/flask-backend/`** | Flask antiguo (no producción) |
 
 > **Nota:** `Fontend` tiene un typo (falta la *r*). Conviene renombrar a `frontend` cuando puedas; mientras tanto Firebase y la documentación usan `Fontend/`.
 
-## Desarrollo
+## Desarrollo local
+
+**Terminal 1 — Backend (emuladores, dejar abierta):**
 
 ```bash
-cd Fontend
+cd Backend
 npm install
-cp .env.example .env
 npm run dev
-
-cd ../Backend
-npm install
-npm run build
 ```
+
+**Terminal 2 — Frontend:**
+
+```bash
+cd Frontend
+npm install
+# En .env: VITE_USE_FIREBASE_EMULATOR=true y credenciales Firebase
+npm run dev
+```
+
+> `npm run build` en Backend **solo compila**; no inicia el servidor. Ver [Backend/README.md](Backend/README.md).
 
 ## Firebase (`campussocial-f56a0`)
 
@@ -32,11 +40,29 @@ npm run build
 firebase deploy --only firestore,functions,hosting
 ```
 
-- Hosting → `Fontend/dist`
+- Hosting → `Frontend/dist`
 - Functions → `Backend/`
+
+## Automatización (n8n local con Docker)
+
+El workflow está en `Flujo_Automatizacion/`:
+
+```powershell
+cd Flujo_Automatizacion
+docker compose up -d
+```
+
+1. Guía: [docs/N8N_DOCKER.md](docs/N8N_DOCKER.md) · Checklist: [Flujo_Automatizacion/CHECKLIST.md](Flujo_Automatizacion/CHECKLIST.md)
+2. Importar `CampusSocial _ Publicación LinkedIn.json` en http://localhost:5678
+3. Con ngrok: `ngrok http 5678` → `N8N_WEBHOOK_URL=https://xxx.ngrok-free.dev/webhook/campus-post-form`
+4. App → **Ajustes** → misma URL · **Asistente IA** → **Generar publicación** abre Nueva publicación automáticamente
+
+Alternativa en la nube (sin Docker): [docs/MAKE_SETUP.md](docs/MAKE_SETUP.md)
 
 ## Documentación
 
+- [docs/N8N_DOCKER.md](docs/N8N_DOCKER.md) — n8n local con Docker
+- [docs/MAKE_SETUP.md](docs/MAKE_SETUP.md) — alternativa Make (nube)
 - [STRUCTURA_PROYECTO.md](STRUCTURA_PROYECTO.md)
 - [docs/ARQUITECTURA_FIREBASE.md](docs/ARQUITECTURA_FIREBASE.md)
 - [docs/MODULO_ASISTENTE_IA.md](docs/MODULO_ASISTENTE_IA.md) — apartado IA (no carpeta `modules/`)

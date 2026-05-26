@@ -8,4 +8,4 @@ No es un proyecto aparte. Es una **pantalla** del producto CampusSocial.
 | Backend IA | `Backend/src/ai/` (`generateContent`, `chatWithAgent`) |
 | Historial | Firestore `chats/{uid}/mensajes` |
 
-El asistente redacta copy; la publicación en **LinkedIn** usa n8n/Postiz (`Backend/src/integracion/triggerN8nWorkflow.ts`).
+El asistente redacta copy; la publicación en **LinkedIn** usa Make/Postiz (`Backend/src/integracion/triggerMakeWorkflow.ts`).

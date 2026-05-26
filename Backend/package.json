@@ -9,6 +9,8 @@
     "lint": "eslint --ext .js,.ts .",
     "build": "tsc",
     "build:watch": "tsc --watch",
+    "start": "npm run dev",
+    "dev:kill": "powershell -ExecutionPolicy Bypass -File ../scripts/kill-emulator-ports.ps1",
     "dev": "npm run build && cd .. && firebase emulators:start --only functions,firestore,auth,storage",
     "seed": "node ../scripts/seed-firestore.mjs",
     "init-db": "node ../scripts/init-colecciones-firestore.mjs",

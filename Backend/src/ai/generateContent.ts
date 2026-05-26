@@ -1,6 +1,9 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { httpsErrorFrom } from './httpsErrorFrom';
 import * as logger from 'firebase-functions/logger';
-import { generateAiText } from './aiProvider';
+import { generateAiText, getAiKeys } from './aiProvider';
+import { generateGeminiImage } from './generateImage';
+import { parsePostJson } from './parsePostJson';
 import type { GenerateContentRequest, GenerateContentResponse } from '../types';
 
 const RED_HINTS: Record<string, string> = {
@@ -34,30 +37,53 @@ Instrucción: ${prompt}
 
 ${hint}
 
-Responde SOLO con JSON válido (sin markdown):
+Responde ÚNICAMENTE con JSON válido (sin markdown ni texto extra):
 {
-  "contenido": "texto del post",
+  "contenido": "texto del post con párrafos separados por \\n\\n",
   "hashtags": ["tag1", "tag2"],
-  "variaciones": ["versión alternativa 1", "versión alternativa 2"]
+  "variaciones": ["versión alternativa breve"]
 }`;
 
     try {
       const { text, provider } = await generateAiText(userPrompt);
+      const parsed = parsePostJson(text);
 
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text) as GenerateContentResponse;
+      let imagenUrl: string | undefined;
+      let imagenGenerada = false;
+      let imagenNota: string | undefined;
+
+      if (generarImagen) {
+        const keys = getAiKeys();
+        if (keys.gemini) {
+          const img = await generateGeminiImage(keys.gemini, `${prompt} — red ${red}`);
+          if (img) {
+            imagenUrl = img.dataUrl;
+            imagenGenerada = true;
+            if (img.model === 'pollinations-fallback') {
+              imagenNota =
+                'Imagen de respaldo (cuota Google agotada). Para Nano Banana nativo: activa facturación en AI Studio y usa gemini-2.5-flash-image.';
+            }
+          } else {
+            imagenNota =
+              'No se pudo generar imagen. Activa IMAGE_FALLBACK=pollinations en Backend/.secret.local o facturación en AI Studio (gemini-2.5-flash-image).';
+          }
+        } else {
+          imagenNota = 'Configura GEMINI_API_KEY para imágenes con IA.';
+        }
+      }
 
       return {
-        contenido: String(parsed.contenido ?? ''),
-        hashtags: Array.isArray(parsed.hashtags) ? parsed.hashtags.map(String) : [],
-        variaciones: Array.isArray(parsed.variaciones) ? parsed.variaciones.map(String) : [],
+        contenido: parsed.contenido,
+        hashtags: parsed.hashtags,
+        variaciones: parsed.variaciones,
         provider,
-        imagenGenerada: generarImagen ? false : undefined,
+        imagenGenerada,
+        imagenUrl,
+        imagenNota,
       };
     } catch (err) {
       logger.error('generateContent error', err);
-      const msg = err instanceof Error ? err.message : 'Error al generar contenido';
-      throw new HttpsError('internal', msg);
+      throw httpsErrorFrom(err);
     }
   }
 );

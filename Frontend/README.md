@@ -26,6 +26,6 @@ Salida: `dist/` (servida por Firebase Hosting).
 - `src/lib/firebase.ts` — inicialización SDK
 - `src/lib/db/` — acceso Firestore
 - `src/context/AuthContext.tsx` — sesión
-- `src/services/n8n.ts` — flujo publicación vía Cloud Function
+- `src/services/make.ts` — flujo publicación vía Cloud Function → webhook Make
 
 Documentación del monorepo: [../README.md](../README.md)
