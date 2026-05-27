@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import { CampusSocialLogo } from './components/CampusSocialLogo';
 import { useAuth } from '../context/AuthContext';
 import { mensajeErrorAuth } from '../lib/authErrors';
+import { hasRealFirebaseWebConfig } from '../lib/firebase';
 import App, { PublicLanding } from './App';
 
 /** Login + app; invitados ven landing primero */
@@ -108,6 +109,14 @@ export default function AuthGate() {
             onChange={(e) => setPassword(e.target.value)}
           />
           {error && <p className="text-sm text-red-600">{error}</p>}
+          {!hasRealFirebaseWebConfig && (
+            <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
+              Para <strong>Continuar con Google</strong>, agrega en <code className="text-[11px]">Frontend/.env</code>{' '}
+              las claves <code className="text-[11px]">VITE_FIREBASE_API_KEY</code> y{' '}
+              <code className="text-[11px]">VITE_FIREBASE_APP_ID</code> desde Firebase Console, o ejecuta:{' '}
+              <code className="text-[11px]">bash scripts/sync-firebase-web-env.sh</code>
+            </div>
+          )}
           <button
             type="submit"
             disabled={loading}
@@ -118,9 +127,10 @@ export default function AuthGate() {
         </form>
         <button
           type="button"
-          disabled={loading}
+          disabled={loading || !hasRealFirebaseWebConfig}
           onClick={() => void handleGoogle()}
           className="w-full mt-3 py-2 border rounded-xl text-sm disabled:opacity-60"
+          title={hasRealFirebaseWebConfig ? undefined : 'Configura VITE_FIREBASE_API_KEY y APP_ID en Frontend/.env'}
         >
           Continuar con Google
         </button>

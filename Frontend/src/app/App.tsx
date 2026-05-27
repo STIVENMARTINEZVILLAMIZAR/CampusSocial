@@ -603,7 +603,7 @@ const LandingPage: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNav
               <CampusSocialLogo size="sm" textClassName="!text-foreground font-semibold !bg-none" />
             </div>
             <div className="text-sm text-muted-foreground">
-              © 2024 Campus Lands - Educación Tecnológica Colombia
+              © 2026 Campuslands - Educación Tecnológica Colombia
             </div>
           </div>
         </div>
