@@ -17,3 +17,4 @@ export { triggerN8nWorkflow } from "./integracion/triggerN8nWorkflow";
 export { verifyChannelConnection } from "./integracion/verifyChannelConnection";
 export { onAuthUserCreate } from "./auth/onUserCreate";
 export { healthCheck } from "./ai/healthCheck";
+export { linkedinOAuthStart, linkedinOAuthCallback } from "./oauth/linkedinOAuth";

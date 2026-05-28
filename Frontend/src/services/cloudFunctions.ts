@@ -83,3 +83,12 @@ export async function verifyChannelConnection(input: {
   const res = await fn(input);
   return res.data;
 }
+
+export async function linkedinOAuthStart() {
+  const fn = httpsCallable<
+    Record<string, never>,
+    { url: string; state: string; redirectUri: string }
+  >(functions, 'linkedinOAuthStart');
+  const res = await fn({});
+  return res.data;
+}

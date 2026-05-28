@@ -141,6 +141,11 @@ export default function AuthGate() {
         >
           {mode === 'login' ? 'Crear cuenta' : 'Ya tengo cuenta'}
         </button>
+        <p className="mt-6 text-center text-xs text-slate-500">
+          <a href="/privacidad" className="text-[#667eea] hover:underline">
+            Política de privacidad
+          </a>
+        </p>
       </div>
     </div>
   );

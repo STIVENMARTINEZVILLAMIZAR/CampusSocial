@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { ExternalLink, Loader2, ShieldCheck } from 'lucide-react';
 import type { RedSocial } from '../../lib/db/types';
-import { verifyChannelConnection } from '../../services/cloudFunctions';
+import { verifyChannelConnection, linkedinOAuthStart } from '../../services/cloudFunctions';
 
 const POSTIZ_URL = import.meta.env.VITE_POSTIZ_URL || 'https://postiz.com';
 
@@ -15,6 +15,7 @@ type Props = {
 
 export function ConnectChannelModal({ isOpen, onClose, channelName, red, onSuccess }: Props) {
   const [step, setStep] = useState<1 | 2>(1);
+  const [mode, setMode] = useState<'choose' | 'postiz'>('choose');
   const [integrationId, setIntegrationId] = useState('');
   const [profileUrl, setProfileUrl] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,7 +26,28 @@ export function ConnectChannelModal({ isOpen, onClose, channelName, red, onSucce
   const isLinkedIn = red === 'linkedin';
   const postizConnect = `${POSTIZ_URL.replace(/\/$/, '')}/settings`;
 
-  const handleVerify = async () => {
+  const resetAndClose = () => {
+    setStep(1);
+    setMode('choose');
+    setIntegrationId('');
+    setProfileUrl('');
+    setError('');
+    onClose();
+  };
+
+  const handleLinkedInOAuth = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const { url } = await linkedinOAuthStart();
+      window.location.href = url;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'No se pudo iniciar OAuth de LinkedIn');
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyPostiz = async () => {
     setLoading(true);
     setError('');
     try {
@@ -39,10 +61,7 @@ export function ConnectChannelModal({ isOpen, onClose, channelName, red, onSucce
         cuentaNombre: res.cuentaNombre,
         integrationId: res.integrationId,
       });
-      setStep(1);
-      setIntegrationId('');
-      setProfileUrl('');
-      onClose();
+      resetAndClose();
     } catch (e) {
       setError(e instanceof Error ? e.message : 'No se pudo verificar la conexión');
     } finally {
@@ -52,24 +71,54 @@ export function ConnectChannelModal({ isOpen, onClose, channelName, red, onSucce
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-card border border-border rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={resetAndClose} />
+      <div className="relative bg-card border border-border rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-border">
           <h3 className="text-lg font-semibold">Conectar {channelName}</h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Autenticación real vía Postiz + Make (no solo un nombre estático).
+            {isLinkedIn
+              ? 'Conexión oficial con LinkedIn (OAuth) o alternativa vía Postiz.'
+              : 'Conecta la cuenta con Postiz o tu escenario de automatización.'}
           </p>
         </div>
 
         <div className="p-6 space-y-4">
-          {step === 1 && (
+          {isLinkedIn && mode === 'choose' && (
+            <>
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-sm space-y-2">
+                <p className="font-medium text-emerald-900">Recomendado — API de LinkedIn</p>
+                <p className="text-emerald-800/90">
+                  Autoriza CampusSocial en LinkedIn. Los tokens se guardan de forma segura en el servidor
+                  (no en el navegador).
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={loading}
+                className="w-full py-3 rounded-xl bg-[#0A66C2] text-white font-medium hover:opacity-95 disabled:opacity-50 flex items-center justify-center gap-2"
+                onClick={() => void handleLinkedInOAuth()}
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Conectar con LinkedIn
+              </button>
+              <button
+                type="button"
+                className="w-full py-2.5 text-sm text-muted-foreground hover:text-foreground"
+                onClick={() => setMode('postiz')}
+              >
+                Usar Postiz (alternativa)
+              </button>
+            </>
+          )}
+
+          {(!isLinkedIn || mode === 'postiz') && step === 1 && (
             <>
               <div className="p-4 bg-accent rounded-xl text-sm space-y-2">
                 <p className="font-medium">Paso 1 — Conecta la cuenta en Postiz</p>
                 <p className="text-muted-foreground">
                   {isLinkedIn
-                    ? 'LinkedIn exige publicar mediante Postiz. Abre Postiz, conecta tu perfil o página y copia el ID de integración.'
-                    : 'Conecta la cuenta en Postiz o tu escenario Make y obtén el identificador de la integración.'}
+                    ? 'Si prefieres Postiz, conecta tu perfil allí y copia el ID de integración.'
+                    : 'Conecta la cuenta en Postiz o Make y obtén el identificador de la integración.'}
                 </p>
               </div>
               <a
@@ -88,10 +137,15 @@ export function ConnectChannelModal({ isOpen, onClose, channelName, red, onSucce
               >
                 Ya conecté en Postiz — continuar
               </button>
+              {isLinkedIn && (
+                <button type="button" className="w-full py-2 text-sm text-muted-foreground" onClick={() => setMode('choose')}>
+                  Volver a OAuth de LinkedIn
+                </button>
+              )}
             </>
           )}
 
-          {step === 2 && (
+          {(!isLinkedIn || mode === 'postiz') && step === 2 && (
             <>
               <div>
                 <label className="text-sm font-medium block mb-1">
@@ -115,7 +169,7 @@ export function ConnectChannelModal({ isOpen, onClose, channelName, red, onSucce
               </div>
               <p className="text-xs text-muted-foreground flex items-start gap-2">
                 <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-600" />
-                Verificamos la conexión con tu escenario Make (acción verify_channel). Sin webhook, validamos el ID localmente.
+                Verificamos con tu webhook (acción verify_channel) o validamos el ID localmente.
               </p>
               {error && <p className="text-sm text-destructive">{error}</p>}
               <div className="flex gap-2">
@@ -126,7 +180,7 @@ export function ConnectChannelModal({ isOpen, onClose, channelName, red, onSucce
                   type="button"
                   disabled={loading || (!integrationId.trim() && !profileUrl.trim())}
                   className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white font-medium disabled:opacity-50 flex items-center justify-center gap-2"
-                  onClick={() => void handleVerify()}
+                  onClick={() => void handleVerifyPostiz()}
                 >
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                   Verificar y conectar

@@ -602,8 +602,12 @@ const LandingPage: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNav
             <div className="flex items-center gap-2">
               <CampusSocialLogo size="sm" textClassName="!text-foreground font-semibold !bg-none" />
             </div>
-            <div className="text-sm text-muted-foreground">
-              © 2026 Campuslands - Educación Tecnológica Colombia
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
+              <a href="/privacidad" className="hover:text-[#667eea] transition-colors">
+                Política de privacidad
+              </a>
+              <span className="hidden sm:inline text-border">·</span>
+              <span>© 2026 Campuslands - Educación Tecnológica Colombia</span>
             </div>
           </div>
         </div>
@@ -2283,6 +2287,26 @@ const ChannelsScreen: React.FC = () => {
   const { data: canales, isLoading } = useCanales();
   const { stats } = useDashboardStats();
   const [connectModal, setConnectModal] = useState<{ red: RedSocial; name: string } | null>(null);
+  const [oauthNotice, setOauthNotice] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const linkedin = params.get('linkedin');
+    if (!linkedin) return;
+
+    if (linkedin === 'success') {
+      setOauthNotice('LinkedIn conectado correctamente.');
+      invalidate();
+    } else {
+      const detail = params.get('linkedin_error');
+      setOauthNotice(
+        detail
+          ? `No se pudo conectar LinkedIn: ${detail}`
+          : 'No se pudo completar la conexión con LinkedIn.'
+      );
+    }
+    window.history.replaceState({}, '', window.location.pathname);
+  }, [invalidate]);
 
   const defs = [
     { id: 'linkedin' as RedSocial, name: 'LinkedIn', icon: <Linkedin className="w-6 h-6 text-blue-600" />, color: 'bg-blue-50 border-blue-200' },
@@ -2309,6 +2333,12 @@ const ChannelsScreen: React.FC = () => {
         <p className="text-muted-foreground">Gestiona las integraciones con tus redes sociales</p>
       </div>
 
+      {oauthNotice && (
+        <div className="mb-4 p-3 rounded-xl border border-emerald-200 bg-emerald-50 text-sm text-emerald-900">
+          {oauthNotice}
+        </div>
+      )}
+
       {/* Alert */}
       <div className="mb-6 flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-xl">
         <div className="w-5 h-5 text-blue-600 mt-0.5">
@@ -2316,7 +2346,7 @@ const ChannelsScreen: React.FC = () => {
         </div>
         <div className="flex-1">
           <p className="text-sm text-blue-900">
-            <strong>LinkedIn publica vía integración oficial (Postiz).</strong> Conexión segura y compatible con las políticas de LinkedIn.
+            <strong>LinkedIn:</strong> conecta con OAuth (API oficial) o usa Postiz como alternativa. Los tokens OAuth solo viven en el servidor.
           </p>
         </div>
       </div>
@@ -2631,6 +2661,14 @@ export default function App({ productionMode = false }: { productionMode?: boole
   const { logout } = useAuth();
   const [currentScreen, setCurrentScreen] = useState<string>(productionMode ? 'dashboard' : 'landing');
   const [viewportWidth, setViewportWidth] = useState(1440);
+
+  React.useEffect(() => {
+    if (!productionMode) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('linkedin') === 'success') {
+      setCurrentScreen('channels');
+    }
+  }, [productionMode]);
 
   // Simulate responsive views
   const viewports = [

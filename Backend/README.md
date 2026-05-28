@@ -9,7 +9,17 @@ Este backend **no es un servidor** tipo Flask que queda escuchando con `npm run 
 
 ## Arrancar el backend (local)
 
-**Requisitos:** [Firebase CLI](https://firebase.google.com/docs/cli) instalado (`npm install -g firebase-tools`).
+**Requisitos:**
+- [Firebase CLI](https://firebase.google.com/docs/cli) (`npm install -g firebase-tools`)
+- **JDK 21+** para emuladores Firestore/Storage (Firebase ya no admite Java 17)
+
+```bash
+# Sin sudo (descarga Temurin a ~/jdk/jdk-21):
+bash scripts/install-jdk21-user.sh
+
+# O con apt:
+sudo apt-get install -y openjdk-21-jdk
+```
 
 ```powershell
 cd Backend

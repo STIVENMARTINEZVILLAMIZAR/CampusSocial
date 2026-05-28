@@ -13,6 +13,17 @@ Automatización de publicaciones en redes para **Campus Lands**, con foco en **L
 
 > **Nota:** `Fontend` tiene un typo (falta la *r*). Conviene renombrar a `frontend` cuando puedas; mientras tanto Firebase y la documentación usan `Fontend/`.
 
+## Requisito: Node.js 20+
+
+El sistema puede traer Node 12 por defecto (`/usr/bin/node`). CampusSocial necesita **Node ≥ 20** (Vite 6, Firebase 11).
+
+```bash
+# Si instalaste nvm (una vez):
+source ~/.bashrc
+nvm use          # lee .nvmrc → Node 20
+bash scripts/ensure-node.sh
+```
+
 ## Desarrollo local
 
 **Terminal 1 — Backend (emuladores, dejar abierta):**
@@ -36,8 +47,15 @@ npm run dev
 
 ## Firebase (`campussocial-f56a0`)
 
+- **Hosting en vivo:** https://campussocial-f56a0.web.app · Privacidad: `/privacidad`
+- **Cloud Functions** requieren plan **Blaze** (ver [docs/DEPLOY_FIREBASE.md](docs/DEPLOY_FIREBASE.md))
+
 ```bash
-firebase deploy --only firestore,functions,hosting
+# Sin Blaze (app + reglas Firestore):
+firebase deploy --only hosting,firestore
+
+# Con Blaze (backend completo):
+firebase deploy --only hosting,functions,firestore
 ```
 
 - Hosting → `Frontend/dist`

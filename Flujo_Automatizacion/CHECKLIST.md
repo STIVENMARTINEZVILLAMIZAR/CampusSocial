@@ -54,5 +54,8 @@ Usa esto para validar que todo el software y n8n Docker/ngrok quedan alineados.
 ## Pendientes habituales (fuera de n8n)
 
 - [ ] Subir imagen IA a Firebase Storage antes del webhook (URL estable)
-- [ ] OAuth real Meta/LinkedIn (hoy Postiz + ID integración)
+- [x] Política de privacidad `/privacidad` (Hosting)
+- [x] OAuth LinkedIn (`linkedinOAuthStart` + `linkedinOAuthCallback`) — configurar `LINKEDIN_CLIENT_ID` en `.secret.local`
+- [ ] OAuth Meta Graph API
+- [ ] Postiz como alternativa (ID integración) — sigue disponible
 - [ ] Callback n8n → actualizar `publicaciones.estado` en Firestore

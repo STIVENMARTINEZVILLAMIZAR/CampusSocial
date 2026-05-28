@@ -1,5 +1,5 @@
 import { createRoot } from 'react-dom/client';
-import AppRoot from './app/AppRoot';
+import AppRoutes from './app/AppRoutes';
 import './styles/index.css';
 
-createRoot(document.getElementById('root')!).render(<AppRoot />);
+createRoot(document.getElementById('root')!).render(<AppRoutes />);
