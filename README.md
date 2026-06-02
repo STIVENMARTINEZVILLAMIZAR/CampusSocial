@@ -18,7 +18,7 @@ Automatización de publicaciones en redes para **Campus Lands**, con foco en **L
 El sistema puede traer Node 12 por defecto (`/usr/bin/node`). CampusSocial necesita **Node ≥ 20** (Vite 6, Firebase 11).
 
 ```bash
-# Si instalaste nvm (una vez):
+# Si instalaste nvm (una vez)::
 source ~/.bashrc
 nvm use          # lee .nvmrc → Node 20
 bash scripts/ensure-node.sh
