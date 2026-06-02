@@ -5,6 +5,7 @@ import {
   resolveAutomationWebhookSecret,
   resolveAutomationWebhookUrl,
 } from './automationWebhook';
+import { buildAutomationWebhookHeaders } from './automationWebhookHeaders';
 
 type VerifyRequest = {
   red: string;
@@ -22,7 +23,7 @@ export const verifyChannelConnection = onCall(
 
     const { red, integrationId, profileUrl, cuentaNombre } = request.data as VerifyRequest;
     const redNorm = (red || '').toLowerCase();
-    const allowed = ['linkedin', 'instagram', 'facebook', 'twitter', 'tiktok'];
+    const allowed = ['linkedin'];
     if (!allowed.includes(redNorm)) {
       throw new HttpsError('invalid-argument', 'red no válida');
     }
@@ -33,6 +34,39 @@ export const verifyChannelConnection = onCall(
     }
 
     const uid = request.auth.uid;
+    const db = getFirestore();
+
+    if (redNorm === 'linkedin') {
+      const tokensSnap = await db.collection('tokens_redes').doc(uid).get();
+      const li = tokensSnap.data()?.linkedin as
+        | { accessToken?: string; memberUrn?: string; displayName?: string }
+        | undefined;
+      if (li?.accessToken && li?.memberUrn) {
+        const cuentaOAuth = li.displayName || li.memberUrn;
+        await db.collection('canales').doc(uid).set(
+          {
+            usuarioId: uid,
+            linkedin: {
+              conectado: true,
+              cuentaNombre: cuentaOAuth,
+              proveedor: 'linkedin_oauth',
+              integrationId: li.memberUrn,
+              verificadoPor: 'linkedin_oauth',
+              verificadoEn: FieldValue.serverTimestamp(),
+            },
+            actualizadoEn: FieldValue.serverTimestamp(),
+          },
+          { merge: true }
+        );
+        return {
+          ok: true,
+          cuentaNombre: cuentaOAuth,
+          integrationId: li.memberUrn,
+          verificadoPor: 'linkedin_oauth',
+        };
+      }
+    }
+
     const webhook = await resolveAutomationWebhookUrl(uid);
     const secret = resolveAutomationWebhookSecret();
     let verificadoPor = 'campus-local';
@@ -43,7 +77,7 @@ export const verifyChannelConnection = onCall(
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(secret ? { 'X-Campus-Secret': secret } : {}),
+            ...buildAutomationWebhookHeaders(secret),
           },
           body: JSON.stringify({
             action: 'verify_channel',
@@ -70,7 +104,6 @@ export const verifyChannelConnection = onCall(
     }
 
     const cuentaFinal = integrationId?.trim() || profileUrl?.trim() || cuentaNombre?.trim() || id;
-    const db = getFirestore();
     await db.collection('canales').doc(uid).set(
       {
         usuarioId: uid,

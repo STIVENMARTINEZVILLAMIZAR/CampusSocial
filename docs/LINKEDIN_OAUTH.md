@@ -1,50 +1,50 @@
 # LinkedIn OAuth — CampusSocial
 
-## URL de política de privacidad (formulario LinkedIn Developers)
+CampusSocial conecta LinkedIn con **OAuth 2.0** ([LinkedIn Developers](https://www.linkedin.com/developers/apps)). No hace falta Postiz.
 
-Usa una de estas URLs **públicas en HTTPS** (tras desplegar Hosting):
+## Política de privacidad (formulario LinkedIn)
 
 | URL | Cuándo |
 |-----|--------|
-| `https://campussocial-f56a0.web.app/privacidad` | App React (recomendada) |
-| `https://campussocial-f56a0.web.app/privacidad.html` | HTML estático (respaldo) |
+| `https://campussocial-f56a0.web.app/privacidad` | Producción (recomendada) |
+| `http://localhost:5173/privacidad` | Solo pruebas locales |
 
-En local (solo pruebas): `http://localhost:5173/privacidad` — LinkedIn **no** acepta `localhost` en producción; despliega primero para crear la app.
+LinkedIn **no** acepta `localhost` en producción; despliega Hosting antes de crear la app.
 
-## Crear app en LinkedIn
+## 1. App en LinkedIn Developers
 
-1. [LinkedIn Developers](https://www.linkedin.com/developers/apps) → **Crear aplicación**
-2. Página: **Campuslands**
-3. **URL de política de privacidad:** ver tabla arriba
-4. Producto: **Share on LinkedIn** (y permisos de organización si publicas como empresa)
+1. App **CampusSocial** (Client ID `78yegyn4dy3vpv`).
+2. **Products**: **Sign In with LinkedIn using OpenID Connect** + **Share on LinkedIn**.
+3. **Auth** → **Authorized redirect URLs** (local):
 
-## Redirect URI (Auth)
+```
+http://localhost:5173/oauth/linkedin
+http://127.0.0.1:5173/oauth/linkedin
+```
 
-En la app de LinkedIn → **Auth** → **Authorized redirect URLs**, añade:
+4. Pulsa **Update** al final de la sección.
 
-**Producción:**
+**Producción (flujo legacy HTTP opcional):**
 
 ```
 https://us-central1-campussocial-f56a0.cloudfunctions.net/linkedinOAuthCallback
 ```
 
-**Emulador local:**
+| Entorno | Redirect (recomendado) |
+|---------|------------------------|
+| Local Vite | `http://localhost:5173/oauth/linkedin` |
+| Producción | `https://campussocial-f56a0.web.app/oauth/linkedin` |
 
-```
-http://127.0.0.1:5001/campussocial-f56a0/us-central1/linkedinOAuthCallback
-```
-
-## Secretos (`Backend/.secret.local`)
+## 2. Secretos (`Backend/.secret.local`)
 
 ```env
-LINKEDIN_CLIENT_ID=tu_client_id
-LINKEDIN_CLIENT_SECRET=tu_client_secret
-# Opcional (si no usas el valor por defecto):
-# LINKEDIN_REDIRECT_URI=https://us-central1-campussocial-f56a0.cloudfunctions.net/linkedinOAuthCallback
+LINKEDIN_CLIENT_ID=78yegyn4dy3vpv
+LINKEDIN_CLIENT_SECRET=tu_primary_client_secret
+LINKEDIN_OAUTH_INCLUDE_POST_SCOPE=false
 APP_FRONTEND_URL=https://campussocial-f56a0.web.app
 ```
 
-Producción en Firebase:
+En producción:
 
 ```bash
 firebase functions:secrets:set LINKEDIN_CLIENT_ID
@@ -52,14 +52,41 @@ firebase functions:secrets:set LINKEDIN_CLIENT_SECRET
 firebase functions:secrets:set APP_FRONTEND_URL
 ```
 
-## Flujo en la app
+Reinicia `npm run dev` tras cambiar `.secret.local`.
 
-1. Usuario → **Canales** → **Conectar LinkedIn** → **Conectar con LinkedIn**
-2. Callable `linkedinOAuthStart` → redirect a LinkedIn
-3. LinkedIn → `linkedinOAuthCallback` → guarda `tokens_redes` + `canales`
-4. Redirect a `/?linkedin=success` → pantalla Canales
+## 3. Frontend (opcional)
 
-## Desplegar política de privacidad
+```env
+VITE_LINKEDIN_OAUTH_REDIRECT_URI=http://localhost:5173/oauth/linkedin
+```
+
+## 4. Flujo en la app (recomendado)
+
+1. **Canales** → **Conectar LinkedIn** → **Iniciar sesión con LinkedIn**.
+2. LinkedIn redirige a `/oauth/linkedin?code=...&state=...`.
+3. `completeLinkedInOAuth` guarda tokens en `tokens_redes/{uid}`.
+4. `publishPostNow` publica con `POST https://api.linkedin.com/v2/ugcPosts`.
+
+**Flujo legacy:** `linkedinOAuthStart` → callback HTTP → `/?linkedin=success`.
+
+## 5. Scopes
+
+- `openid`, `profile`, `email`
+- `w_member_social` — publicar (requiere Share on LinkedIn aprobado)
+
+## 6. Errores frecuentes
+
+| Error | Causa |
+|-------|--------|
+| «Bummer» en linkedin.com | Share on LinkedIn pendiente → `LINKEDIN_OAUTH_INCLUDE_POST_SCOPE=false` |
+| `redirect_uri mismatch` | URL en Developers ≠ la que envía el frontend |
+| `403` al publicar | Sin permiso `w_member_social` o producto no aprobado |
+
+## 7. Make / n8n
+
+Opcional para notificaciones. La **publicación** la hace CampusSocial con OAuth.
+
+## 8. Desplegar
 
 ```bash
 cd Frontend && npm run build

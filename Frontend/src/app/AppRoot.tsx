@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from '../context/AuthContext';
 import { ThemeProvider } from '../context/ThemeContext';
 import App from './App';
 import AuthGate from './AuthGate';
+import { LinkedInOAuthCallback } from './LinkedInOAuthCallback';
+import { isLinkedInOAuthCallbackPath } from '../lib/linkedinOAuth';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -31,11 +33,13 @@ function AppWithAuth() {
 }
 
 export default function AppRoot() {
+  const oauthCallback = typeof window !== 'undefined' && isLinkedInOAuthCallbackPath();
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <AppWithAuth />
+          {oauthCallback ? <LinkedInOAuthCallback /> : <AppWithAuth />}
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

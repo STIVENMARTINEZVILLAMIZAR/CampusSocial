@@ -15,6 +15,8 @@ export { triggerMakeWorkflow } from "./integracion/triggerMakeWorkflow";
 /** @deprecated usar triggerMakeWorkflow */
 export { triggerN8nWorkflow } from "./integracion/triggerN8nWorkflow";
 export { verifyChannelConnection } from "./integracion/verifyChannelConnection";
+export { startLinkedInOAuth } from "./integracion/startLinkedInOAuth";
+export { completeLinkedInOAuth } from "./integracion/completeLinkedInOAuth";
 export { onAuthUserCreate } from "./auth/onUserCreate";
 export { healthCheck } from "./ai/healthCheck";
 export { linkedinOAuthStart, linkedinOAuthCallback } from "./oauth/linkedinOAuth";

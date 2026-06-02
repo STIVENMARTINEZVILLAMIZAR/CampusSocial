@@ -8,8 +8,14 @@ export interface AutomationPostPayload {
   telegram_notify: boolean;
   schedule_now: boolean;
   platforms: RedSocial[];
-  action?: 'publish' | 'verify_channel';
+  action?: 'publish' | 'verify_channel' | 'notify_published' | 'notify_scheduled';
   provider?: 'make' | 'n8n';
+  /** true = LinkedIn ya publicó CampusSocial (OAuth); Make solo notifica / registra */
+  campus_published?: boolean;
+  post_id?: string;
+  scheduled_at?: string;
+  linkedin_member_urn?: string;
+  linkedin_display_name?: string;
   title?: string;
   body?: string;
   hashtags?: string[];

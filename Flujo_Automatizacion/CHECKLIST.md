@@ -25,18 +25,20 @@ Usa esto para validar que todo el software y n8n Docker/ngrok quedan alineados.
 
 \* La app ya genera texto/imagen; n8n puede solo publicar.
 
-## Secciones de la app
+## Secciones de la app (solo LinkedIn)
 
 | Pantalla | Qué debe hacer | Enlace con n8n |
 |----------|----------------|----------------|
-| **Asistente IA** | Ideas + botón **Generar publicación** → Nueva pub. auto | No llama n8n directo |
-| **Nueva publicación** | Gemini + webhook n8n con `body`/`image_url` | `triggerN8nWorkflow` |
-| **Subir publicación** | Storage + programar | Opcional webhook al programar |
+| **Asistente IA** | Ideas + **Generar publicación** → Nueva pub. auto | No llama n8n directo |
+| **Nueva publicación** | Gemini + webhook n8n con `body`/`image_url` | `platforms: ["linkedin"]` |
+| **Subir publicación** | Storage + programar en LinkedIn | Opcional webhook |
 | **Borradores** | Firestore | n8n crea borrador al disparar webhook |
-| **Calendario** | Programados + arrastrar fecha | `schedulePost` + opcional n8n |
-| **Canales** | Verificar cuenta + Postiz | `verify_channel` en webhook |
+| **Calendario** | Programados + arrastrar fecha | Solo icono LinkedIn |
+| **Canales** | **Solo LinkedIn** — Postiz + Developers | `verify_channel` + `red: linkedin` |
 | **Ajustes** | URL webhook n8n/ngrok | `N8N_WEBHOOK_URL` |
 | **Inicio** | KPIs y actividad | Trazas en `ejecuciones_n8n` |
+
+Facebook e Instagram **no** aparecen en la UI; el workflow n8n puede simplificarse a una sola rama LinkedIn.
 
 ## Payload mínimo de prueba
 
@@ -51,11 +53,12 @@ Usa esto para validar que todo el software y n8n Docker/ngrok quedan alineados.
 }
 ```
 
+En n8n puedes desactivar o eliminar las ramas Instagram/Facebook/Twitter del JSON importado si solo usas LinkedIn.
+
 ## Pendientes habituales (fuera de n8n)
 
 - [ ] Subir imagen IA a Firebase Storage antes del webhook (URL estable)
 - [x] Política de privacidad `/privacidad` (Hosting)
-- [x] OAuth LinkedIn (`linkedinOAuthStart` + `linkedinOAuthCallback`) — configurar `LINKEDIN_CLIENT_ID` en `.secret.local`
+- [x] OAuth LinkedIn (`startLinkedInOAuth` + `/oauth/linkedin`) — configurar `LINKEDIN_CLIENT_ID` en `.secret.local`
 - [ ] OAuth Meta Graph API
-- [ ] Postiz como alternativa (ID integración) — sigue disponible
 - [ ] Callback n8n → actualizar `publicaciones.estado` en Firestore

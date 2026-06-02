@@ -43,7 +43,11 @@ export async function publishPostById(postId: string, userId: string): Promise<v
           );
           break;
         case 'linkedin':
-          resultados.linkedin = await publishToLinkedIn(tokens.linkedin ?? {}, post.contenido);
+          resultados.linkedin = await publishToLinkedIn(
+            tokens.linkedin ?? {},
+            post.contenido,
+            post.imagenUrl
+          );
           break;
         default:
           resultados[red] = { success: false, error: `Red ${red} aún no implementada` };

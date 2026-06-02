@@ -84,6 +84,25 @@ export async function verifyChannelConnection(input: {
   return res.data;
 }
 
+export async function startLinkedInOAuth(redirectUri: string) {
+  const fn = httpsCallable<
+    { redirectUri: string },
+    { authUrl: string; state: string }
+  >(functions, 'startLinkedInOAuth');
+  const res = await fn({ redirectUri });
+  return res.data;
+}
+
+export async function completeLinkedInOAuth(input: { code: string; state: string }) {
+  const fn = httpsCallable<
+    typeof input,
+    { ok: boolean; cuentaNombre: string; memberUrn: string; email?: string }
+  >(functions, 'completeLinkedInOAuth');
+  const res = await fn(input);
+  return res.data;
+}
+
+/** Flujo legacy (redirect vía Cloud Function HTTP) */
 export async function linkedinOAuthStart() {
   const fn = httpsCallable<
     Record<string, never>,

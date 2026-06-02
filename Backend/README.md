@@ -27,6 +27,8 @@ npm install
 npm run dev
 ```
 
+En Windows no hace falta WSL/bash: `npm run dev` usa `run-dev.cjs` y llama a Firebase directamente.
+
 Deja esa terminal **abierta**. Cuando veas `All emulators ready!`, el backend está activo.
 
 - Functions (IA, posts, n8n): `http://127.0.0.1:5001`
@@ -47,6 +49,15 @@ GEMINI_MODEL=gemini-2.0-flash
 - **gemini-2.5-flash** funciona con clave nueva; si hay cuota (429), prueba `gemini-2.0-flash-lite`.
 
 Copia desde `Backend/.secret.local.example`.
+
+### LinkedIn OAuth (conectar cuenta sin Postiz)
+
+```env
+LINKEDIN_CLIENT_ID=...
+LINKEDIN_CLIENT_SECRET=...
+```
+
+Guía completa: [docs/LINKEDIN_OAUTH.md](../docs/LINKEDIN_OAUTH.md). Redirect local: `http://localhost:5173/oauth/linkedin`.
 
 ## Conectar el Frontend
 

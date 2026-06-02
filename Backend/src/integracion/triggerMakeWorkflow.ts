@@ -1,4 +1,5 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
+import { getFirestore } from 'firebase-admin/firestore';
 import * as logger from 'firebase-functions/logger';
 import type { AutomationPostPayload, AutomationPostResponse } from './automationTypes';
 import { crearBorradorEnFirestore, registrarEjecucion } from './n8nPersistence';
@@ -6,6 +7,7 @@ import {
   resolveAutomationWebhookSecret,
   resolveAutomationWebhookUrl,
 } from './automationWebhook';
+import { buildAutomationWebhookHeaders } from './automationWebhookHeaders';
 
 export const triggerMakeWorkflow = onCall(
   { region: 'us-central1', timeoutSeconds: 300 },
@@ -25,7 +27,7 @@ export const triggerMakeWorkflow = onCall(
     if (!url) {
       throw new HttpsError(
         'failed-precondition',
-        'Webhook no configurado. Añade N8N_WEBHOOK_URL en Backend/.secret.local o la URL en Ajustes (n8n Docker).'
+        'Webhook no configurado. Añade MAKE_WEBHOOK_URL en Backend/.secret.local o la URL del escenario Make en Ajustes.'
       );
     }
 
@@ -33,10 +35,17 @@ export const triggerMakeWorkflow = onCall(
     const executionId = await registrarEjecucion(uid, payload, borradorId);
     const secret = resolveAutomationWebhookSecret();
 
+    const tokensSnap = await getFirestore().collection('tokens_redes').doc(uid).get();
+    const li = tokensSnap.data()?.linkedin as
+      | { memberUrn?: string; displayName?: string }
+      | undefined;
+
     const body: AutomationPostPayload = {
       ...payload,
       provider: 'make',
       action: payload.action ?? 'publish',
+      linkedin_member_urn: payload.linkedin_member_urn ?? li?.memberUrn,
+      linkedin_display_name: payload.linkedin_display_name ?? li?.displayName,
     };
 
     try {
@@ -44,7 +53,7 @@ export const triggerMakeWorkflow = onCall(
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(secret ? { 'X-Campus-Secret': secret } : {}),
+          ...buildAutomationWebhookHeaders(secret),
         },
         body: JSON.stringify(body),
       });

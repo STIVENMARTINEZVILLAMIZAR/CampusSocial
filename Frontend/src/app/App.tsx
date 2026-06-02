@@ -3,7 +3,7 @@ import {
   Sparkles, Calendar, FileText, Settings,
   Home, PenSquare, MessageSquare, Share2,
   Search, Bell, ChevronDown, X, Check,
-  Linkedin, Instagram, Facebook, Twitter,
+  Linkedin,
   Clock, Trash2, Edit, Send, Plus,
   Zap, Network, BarChart3, CheckCircle2,
   ArrowRight, Play, Eye, Save, Loader2,
@@ -25,6 +25,7 @@ import {
   crearPublicacion,
   crearBorrador,
   eliminarBorrador,
+  actualizarBorrador,
   eliminarPublicacion,
   actualizarPublicacion,
   registrarActividad,
@@ -53,6 +54,8 @@ import { ConnectChannelModal } from './components/ConnectChannelModal';
 import { healthCheck } from '../services/cloudFunctions';
 import { toDate, formatRelative, formatDateTime } from '../lib/format';
 import { consumePostDraftFromAgent, savePostDraftFromAgent } from '../lib/postDraftBridge';
+import { consumeBorradorResume, resumeBorradorAndNavigate } from '../lib/borradorResumeBridge';
+import { RED_PRINCIPAL, REDES_PUBLICACION } from '../lib/redesConfig';
 
 // ============================================================================
 // DESIGN SYSTEM - COMPONENTES REUTILIZABLES
@@ -396,15 +399,15 @@ const LandingPage: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNav
           <div className="space-y-6">
             <Badge variant="purple">🚀 Potenciado por IA</Badge>
             <h1 className="text-5xl font-bold leading-tight">
-              Automatiza LinkedIn y tus redes con{' '}
+              Automatiza{' '}
               <span className="bg-gradient-to-r from-[#667eea] to-[#764ba2] bg-clip-text text-transparent">
-                Inteligencia Artificial
-              </span>
+                LinkedIn
+              </span>{' '}
+              con Inteligencia Artificial
             </h1>
             <p className="text-lg text-muted-foreground">
-              CampusSocial automatiza publicaciones para Campus Lands, con foco en{' '}
-              <strong>LinkedIn</strong>: genera copy con IA, programa posts y publica de forma oficial vía Postiz.
-              Instagram y otras redes son complementarias.
+              CampusSocial automatiza publicaciones para Campus Lands en{' '}
+              <strong>LinkedIn</strong>: genera copy con IA, programa posts y publica de forma oficial vía Postiz y n8n.
             </p>
             <div className="flex items-center gap-4">
               <Button 
@@ -443,16 +446,8 @@ const LandingPage: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNav
                   <div className="flex items-center gap-2">
                     <ArrowRight className="w-6 h-6 text-muted-foreground" />
                   </div>
-                  <div className="flex gap-2">
-                    <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
-                      <Linkedin className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center">
-                      <Instagram className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center">
-                      <Twitter className="w-6 h-6 text-white" />
-                    </div>
+                  <div className="w-16 h-16 bg-[#0a66c2] rounded-xl flex items-center justify-center">
+                    <Linkedin className="w-8 h-8 text-white" />
                   </div>
                 </div>
                 <div className="bg-accent/50 p-4 rounded-xl space-y-2">
@@ -727,7 +722,10 @@ const DashboardShell: React.FC<{
                     key={b.id}
                     type="button"
                     className="w-full text-left p-2 rounded-lg hover:bg-accent text-sm"
-                    onClick={() => { onNavigate('drafts'); setSearchTerm(''); }}
+                    onClick={() => {
+                      resumeBorradorAndNavigate(b, onNavigate);
+                      setSearchTerm('');
+                    }}
                   >
                     <span className="font-medium">{b.titulo || 'Borrador'}</span>
                   </button>
@@ -817,7 +815,7 @@ const DashboardShell: React.FC<{
 // PANTALLA 3: NUEVA PUBLICACIÓN (Core Screen)
 // ============================================================================
 
-const REDES: RedSocial[] = ['linkedin', 'instagram', 'facebook', 'twitter'];
+type UploadedMedia = { name: string; type: string; preview?: string; file: File };
 
 const NewPostScreen: React.FC = () => {
   const { user, profile } = useAuth();
@@ -825,16 +823,10 @@ const NewPostScreen: React.FC = () => {
   const invalidate = useInvalidateCampus();
   const initials = (profile?.nombre || user?.email || 'U').slice(0, 2).toUpperCase();
   const agentDraftApplied = useRef(false);
+  const [editingBorradorId, setEditingBorradorId] = useState<string | null>(null);
   const [topic, setTopic] = useState('');
   const [tone, setTone] = useState('profesional');
-  const [networks, setNetworks] = useState({
-    linkedin: true,
-    instagram: false,
-    facebook: false,
-    twitter: false
-  });
   const [generateImage, setGenerateImage] = useState(true);
-  const [activeTab, setActiveTab] = useState('linkedin');
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasContent, setHasContent] = useState(false);
   const [showToast, setShowToast] = useState(false);
@@ -847,13 +839,90 @@ const NewPostScreen: React.FC = () => {
   const [generatedText, setGeneratedText] = useState('');
   const [imagenNota, setImagenNota] = useState('');
   const [imagenUrl, setImagenUrl] = useState('');
+  const [manualUploads, setManualUploads] = useState<UploadedMedia[]>([]);
+  const [isDraggingMedia, setIsDraggingMedia] = useState(false);
+  const newPostFileRef = useRef<HTMLInputElement>(null);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const platformsSelected = (): RedSocial[] =>
-    (Object.entries(networks)
-      .filter(([, v]) => v)
-      .map(([k]) => k)
-      .filter((k): k is RedSocial => REDES.includes(k as RedSocial)));
+  const platformsSelected = (): RedSocial[] => REDES_PUBLICACION;
+
+  const addManualFiles = (files: File[]) => {
+    const mapped = files.map((f) => ({
+      name: f.name,
+      type: f.type.startsWith('video') ? 'video' : 'image',
+      preview: f.type.startsWith('image') ? URL.createObjectURL(f) : undefined,
+      file: f,
+    }));
+    setManualUploads((prev) => [...prev, ...mapped].slice(0, 4));
+  };
+
+  const removeManualFile = (idx: number) => {
+    setManualUploads((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const resolvePostImageUrl = async (): Promise<string | null> => {
+    if (generateImage && imagenUrl) return imagenUrl;
+    if (!generateImage && manualUploads[0]?.file && user) {
+      return subirArchivoPublicacion(user.uid, manualUploads[0].file);
+    }
+    return imagenUrl || null;
+  };
+
+  const previewImageUrl =
+    generateImage ? imagenUrl || null : manualUploads[0]?.preview ?? imagenUrl ?? null;
+
+  const showPreview = (hasContent || Boolean(previewImageUrl)) && !isGenerating;
+
+  const persistBorradorSnapshot = useCallback(
+    async (
+      snapshot: {
+        text: string;
+        imageUrl?: string | null;
+        topicText?: string;
+        toneText?: string;
+        withIaImage?: boolean;
+      },
+      opts?: { silent?: boolean }
+    ) => {
+      if (!user) return;
+      const text = snapshot.text.trim();
+      const topicText = (snapshot.topicText ?? topic).trim() || 'Sin tema';
+      if (!text && !snapshot.imageUrl) return;
+
+      let savedImage = snapshot.imageUrl ?? null;
+      if (!savedImage && manualUploads[0]?.file) {
+        savedImage = await subirArchivoPublicacion(user.uid, manualUploads[0].file);
+        if (savedImage) setImagenUrl(savedImage);
+      }
+
+      const payload = {
+        promptOriginal: topicText,
+        tono: snapshot.toneText ?? tone,
+        redesDestino: platformsSelected().length ? platformsSelected() : (['linkedin'] as RedSocial[]),
+        contenidoGenerado: text,
+        titulo: topicText.slice(0, 80) || 'Borrador',
+        imagenUrl: savedImage,
+        imagenConIa: snapshot.withIaImage ?? generateImage,
+      };
+
+      if (editingBorradorId) {
+        await actualizarBorrador(editingBorradorId, payload);
+      } else {
+        const id = await crearBorrador(user.uid, payload);
+        setEditingBorradorId(id);
+      }
+
+      if (!opts?.silent) {
+        invalidate();
+        setToastMsg('Borrador guardado en Firestore');
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 3000);
+      } else {
+        invalidate();
+      }
+    },
+    [user, topic, tone, generateImage, editingBorradorId, manualUploads, invalidate, platformsSelected]
+  );
 
   const runGenerate = useCallback(
     async (topicText: string, toneText: string) => {
@@ -887,6 +956,22 @@ const NewPostScreen: React.FC = () => {
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
 
+      const fullText = [gen.contenido, tags].filter(Boolean).join('\n\n');
+      try {
+        await persistBorradorSnapshot(
+          {
+            text: fullText,
+            imageUrl: gen.imagenUrl ?? null,
+            topicText: topicText.trim(),
+            toneText: toneText,
+            withIaImage: generateImage && Boolean(gen.imagenUrl),
+          },
+          { silent: true }
+        );
+      } catch {
+        /* guardado automático opcional */
+      }
+
       const webhook = getAutomationWebhookUrl(config);
       if (webhook) {
         try {
@@ -913,13 +998,40 @@ const NewPostScreen: React.FC = () => {
       setIsGenerating(false);
     }
   },
-    [user, tone, generateImage, config, networks, platformsSelected]
+    [user, tone, generateImage, config, platformsSelected, persistBorradorSnapshot]
   );
 
   const handleGenerate = () => void runGenerate(topic, tone);
 
   useEffect(() => {
     if (agentDraftApplied.current || !user) return;
+
+    const borrador = consumeBorradorResume();
+    if (borrador) {
+      agentDraftApplied.current = true;
+      setEditingBorradorId(borrador.borradorId);
+      setTopic(borrador.topic);
+      setTone(borrador.tone);
+      if (borrador.generatedText) {
+        setGeneratedText(borrador.generatedText);
+        setHasContent(true);
+      }
+      if (borrador.imagenUrl) {
+        setImagenUrl(borrador.imagenUrl);
+        setGenerateImage(borrador.imagenConIa !== false);
+        setManualUploads([]);
+        setHasContent(true);
+      }
+      setToastMsg(
+        borrador.generatedText || borrador.imagenUrl
+          ? 'Borrador cargado — continúa editando o publica'
+          : 'Borrador cargado — genera el contenido o escribe manualmente'
+      );
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3500);
+      return;
+    }
+
     const draft = consumePostDraftFromAgent();
     if (!draft) return;
     agentDraftApplied.current = true;
@@ -934,23 +1046,20 @@ const NewPostScreen: React.FC = () => {
 
   const handleSaveBorrador = async () => {
     if (!user || !generatedText.trim()) return;
+    setErrorMsg('');
     try {
-      await crearBorrador(user.uid, {
-        promptOriginal: topic.trim() || 'Sin tema',
-        tono: tone,
-        redesDestino: platformsSelected().length ? platformsSelected() : (['linkedin'] as RedSocial[]),
-        contenidoGenerado: generatedText,
-        titulo: topic.slice(0, 80) || 'Borrador',
+      await persistBorradorSnapshot({
+        text: generatedText,
+        imageUrl: imagenUrl || null,
+        topicText: topic.trim(),
+        toneText: tone,
+        withIaImage: generateImage,
       });
       await registrarActividad(user.uid, {
         tipo: 'borrador',
         mensaje: `Borrador guardado: ${topic.slice(0, 40) || 'sin título'}`,
         red: 'linkedin',
       });
-      invalidate();
-      setToastMsg('Borrador guardado en Firestore');
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 3000);
     } catch (e) {
       setErrorMsg(e instanceof Error ? e.message : 'Error al guardar');
     }
@@ -965,14 +1074,40 @@ const NewPostScreen: React.FC = () => {
       const platforms: RedSocial[] = platformsSelected().length
         ? platformsSelected()
         : ['linkedin'];
+      const finalImageUrl = await resolvePostImageUrl();
       const postId = await crearPublicacion(user.uid, {
         titulo: topic.slice(0, 80) || 'Publicación',
         contenido: generatedText || topic,
         redesDestino: platforms,
         estado: scheduleMode === 'now' ? 'pendiente' : 'borrador',
+        imagenUrl: finalImageUrl,
       });
+
       if (scheduleMode === 'now') {
         await publishPostNowFn(postId);
+        const webhookNow = getAutomationWebhookUrl(config);
+        if (webhookNow) {
+          try {
+            await ejecutarFlujoPublicacion(
+              {
+                topic: topic.trim(),
+                tone,
+                include_image: Boolean(finalImageUrl),
+                telegram_notify: false,
+                schedule_now: true,
+                campus_published: true,
+                action: 'notify_published',
+                platforms,
+                body: generatedText || topic,
+                image_url: finalImageUrl,
+                post_id: postId,
+              },
+              webhookNow
+            );
+          } catch {
+            /* Make opcional; LinkedIn ya publicó vía OAuth */
+          }
+        }
         await registrarActividad(user.uid, {
           tipo: 'publicado',
           mensaje: `Publicación IA enviada a ${platforms.join(', ')}`,
@@ -981,6 +1116,7 @@ const NewPostScreen: React.FC = () => {
         setToastMsg('Publicación enviada');
       } else {
         const iso = new Date(`${scheduledDate}T${scheduledTime}`).toISOString();
+        await schedulePostFn(postId, iso, platforms);
         const webhook = getAutomationWebhookUrl(config);
         if (webhook) {
           try {
@@ -988,24 +1124,24 @@ const NewPostScreen: React.FC = () => {
               {
                 topic: topic.trim(),
                 tone,
-                include_image: generateImage,
+                include_image: Boolean(finalImageUrl),
                 telegram_notify: false,
-                schedule_now: true,
+                schedule_now: false,
+                campus_published: false,
+                action: 'notify_scheduled',
                 platforms,
                 body: generatedText || topic,
-                image_url: imagenUrl || null,
+                image_url: finalImageUrl,
+                post_id: postId,
+                scheduled_at: iso,
               },
               webhook
             );
-            setToastMsg('Enviado a n8n para programar');
           } catch {
-            await schedulePostFn(postId, iso, platforms);
-            setToastMsg('Publicación programada');
+            /* Make opcional; el calendario usa Firebase schedulePost */
           }
-        } else {
-          await schedulePostFn(postId, iso, platforms);
-          setToastMsg('Publicación programada');
         }
+        setToastMsg('Publicación programada en el calendario');
         const repeticiones = repeatMode === 'none' ? 1 : repeatMode === 'daily' ? 7 : 4;
         for (let i = 1; i < repeticiones; i++) {
           const next = new Date(iso);
@@ -1075,33 +1211,13 @@ const NewPostScreen: React.FC = () => {
                 onChange={(e) => setTone(e.target.value)}
               />
 
-              <div>
-                <label className="text-sm font-medium text-foreground mb-3 block">Redes sociales</label>
-                <div className="space-y-3 bg-accent/50 p-4 rounded-xl">
-                  <Checkbox
-                    label="LinkedIn"
-                    checked={networks.linkedin}
-                    onChange={(checked) => setNetworks({...networks, linkedin: checked})}
-                    icon={<Linkedin className="w-4 h-4 text-blue-600" />}
-                  />
-                  <Checkbox
-                    label="Instagram"
-                    checked={networks.instagram}
-                    onChange={(checked) => setNetworks({...networks, instagram: checked})}
-                    icon={<Instagram className="w-4 h-4 text-pink-600" />}
-                  />
-                  <Checkbox
-                    label="Facebook"
-                    checked={networks.facebook}
-                    onChange={(checked) => setNetworks({...networks, facebook: checked})}
-                    icon={<Facebook className="w-4 h-4 text-blue-500" />}
-                  />
-                  <Checkbox
-                    label="X (Twitter)"
-                    checked={networks.twitter}
-                    onChange={(checked) => setNetworks({...networks, twitter: checked})}
-                    icon={<Twitter className="w-4 h-4" />}
-                  />
+              <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 p-4 rounded-xl">
+                <Linkedin className="w-6 h-6 text-[#0a66c2] shrink-0" />
+                <div>
+                  <p className="text-sm font-medium">Canal de publicación</p>
+                  <p className="text-xs text-muted-foreground">
+                    Solo LinkedIn — OAuth en Canales; programación en Calendario
+                  </p>
                 </div>
               </div>
 
@@ -1109,8 +1225,80 @@ const NewPostScreen: React.FC = () => {
                 <Toggle
                   label="Generar imagen con IA"
                   checked={generateImage}
-                  onChange={setGenerateImage}
+                  onChange={(v) => {
+                    setGenerateImage(v);
+                    if (v) setManualUploads([]);
+                  }}
                 />
+                {!generateImage && (
+                  <div className="space-y-3 pt-2 border-t border-border">
+                    <p className="text-sm font-medium">Subir foto o archivo</p>
+                    <div
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsDraggingMedia(true);
+                      }}
+                      onDragLeave={() => setIsDraggingMedia(false)}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        setIsDraggingMedia(false);
+                        if (e.dataTransfer.files?.length) {
+                          addManualFiles(Array.from(e.dataTransfer.files));
+                        }
+                      }}
+                      onClick={() => newPostFileRef.current?.click()}
+                      className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center gap-2 cursor-pointer transition-all
+                        ${isDraggingMedia ? 'border-[#667eea] bg-purple-50 dark:bg-purple-950/30' : 'border-border hover:border-[#667eea]/50'}`}
+                    >
+                      <FileUp className="w-6 h-6 text-muted-foreground" />
+                      <p className="text-xs text-center text-muted-foreground">
+                        Arrastra imágenes o haz clic (PNG, JPG, GIF, MP4)
+                      </p>
+                      <input
+                        ref={newPostFileRef}
+                        type="file"
+                        accept="image/*,video/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) =>
+                          e.target.files && addManualFiles(Array.from(e.target.files))
+                        }
+                      />
+                    </div>
+                    {manualUploads.length > 0 && (
+                      <div className="grid grid-cols-3 gap-2">
+                        {manualUploads.map((f, i) => (
+                          <div
+                            key={i}
+                            className="relative aspect-square rounded-lg overflow-hidden bg-accent"
+                          >
+                            {f.preview ? (
+                              <img
+                                src={f.preview}
+                                alt={f.name}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Video className="w-6 h-6 text-muted-foreground" />
+                              </div>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeManualFile(i);
+                              }}
+                              className="absolute top-1 right-1 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center"
+                            >
+                              <X className="w-3 h-3 text-white" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3 pt-4">
@@ -1125,7 +1313,11 @@ const NewPostScreen: React.FC = () => {
                 </Button>
                 <Button variant="ghost" onClick={() => {
                   setTopic('');
+                  setGeneratedText('');
+                  setImagenUrl('');
+                  setManualUploads([]);
                   setHasContent(false);
+                  setEditingBorradorId(null);
                 }}>
                   Limpiar
                 </Button>
@@ -1138,41 +1330,12 @@ const NewPostScreen: React.FC = () => {
             <div className="space-y-4 h-full flex flex-col">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Vista previa</h3>
-                <Badge variant="purple">
-                  {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-                </Badge>
+                <Badge variant="purple">LinkedIn</Badge>
               </div>
 
-              {/* Network Tabs */}
-              <div className="flex gap-2 border-b border-border pb-2">
-                {Object.entries(networks).map(([network, enabled]) => {
-                  if (!enabled) return null;
-                  const icons = {
-                    linkedin: <Linkedin className="w-4 h-4" />,
-                    instagram: <Instagram className="w-4 h-4" />,
-                    facebook: <Facebook className="w-4 h-4" />,
-                    twitter: <Twitter className="w-4 h-4" />
-                  };
-                  return (
-                    <button
-                      key={network}
-                      onClick={() => setActiveTab(network)}
-                      className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-all
-                        ${activeTab === network 
-                          ? 'bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white' 
-                          : 'bg-accent text-muted-foreground hover:text-foreground'
-                        }`}
-                    >
-                      {icons[network as keyof typeof icons]}
-                      {network.charAt(0).toUpperCase() + network.slice(1)}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* LinkedIn Preview */}
+              {/* Vista previa LinkedIn */}
               <div className="flex-1 overflow-y-auto">
-                {!hasContent && !isGenerating && (
+                {!showPreview && (
                   <div className="h-full flex items-center justify-center text-center p-8">
                     <div className="space-y-3">
                       <div className="w-16 h-16 bg-accent rounded-full flex items-center justify-center mx-auto">
@@ -1203,14 +1366,14 @@ const NewPostScreen: React.FC = () => {
                   </div>
                 )}
 
-                {hasContent && !isGenerating && (
+                {showPreview && (
                   <div className="space-y-4">
                     <SocialPostPreview
-                      network={(activeTab as RedSocial) || 'linkedin'}
+                      network={RED_PRINCIPAL}
                       authorName={displayName}
                       authorInitials={initials}
-                      content={generatedText}
-                      imageUrl={generateImage ? imagenUrl : null}
+                      content={generatedText || topic}
+                      imageUrl={previewImageUrl}
                       charLimit={3000}
                     />
                     {generateImage && imagenNota && (
@@ -1285,7 +1448,6 @@ const ManualPostScreen: React.FC = () => {
   const invalidate = useInvalidateCampus();
   const [postText, setPostText] = useState('');
   const [saving, setSaving] = useState(false);
-  const [networks, setNetworks] = useState({ linkedin: true, instagram: false, facebook: false, twitter: false });
   const [scheduleMode, setScheduleMode] = useState<'now' | 'schedule'>('schedule');
   const [scheduledDate, setScheduledDate] = useState('');
   const [scheduledTime, setScheduledTime] = useState('');
@@ -1294,22 +1456,10 @@ const ManualPostScreen: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMsg, setToastMsg] = useState('');
-  const [activePreview, setActivePreview] = useState<'linkedin' | 'instagram' | 'facebook' | 'twitter'>('linkedin');
   const [repeatMode, setRepeatMode] = useState('none');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const charLimits: Record<string, number> = { linkedin: 3000, instagram: 2200, facebook: 63206, twitter: 280 };
-  const networkColors: Record<string, string> = {
-    linkedin: 'text-blue-600', instagram: 'text-pink-600', facebook: 'text-blue-500', twitter: 'text-foreground'
-  };
-  const networkIcons: Record<string, React.ReactNode> = {
-    linkedin: <Linkedin className="w-4 h-4" />,
-    instagram: <Instagram className="w-4 h-4" />,
-    facebook: <Facebook className="w-4 h-4" />,
-    twitter: <Twitter className="w-4 h-4" />
-  };
-
-  const activeNetworks = Object.entries(networks).filter(([, v]) => v).map(([k]) => k);
+  const redesDestino = REDES_PUBLICACION;
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -1342,17 +1492,13 @@ const ManualPostScreen: React.FC = () => {
       notify('Selecciona fecha y hora para programar.');
       return;
     }
-    if (activeNetworks.length === 0) {
-      notify('Selecciona al menos una red social.');
-      return;
-    }
     if (!postText.trim()) {
       notify('El contenido no puede estar vacío.');
       return;
     }
     setSaving(true);
     try {
-      const redes = activeNetworks as RedSocial[];
+      const redes = redesDestino;
       let imagenUrl: string | null = null;
       if (uploadedFiles[0]?.file) {
         imagenUrl = await subirArchivoPublicacion(user.uid, uploadedFiles[0].file);
@@ -1420,11 +1566,9 @@ const ManualPostScreen: React.FC = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold">Contenido del post</h3>
-                  {activeNetworks.length > 0 && (
-                    <span className={`text-xs font-medium ${postText.length > (charLimits[activePreview] ?? 3000) ? 'text-destructive' : 'text-muted-foreground'}`}>
-                      {postText.length} / {charLimits[activePreview] ?? '–'}
-                    </span>
-                  )}
+                  <span className={`text-xs font-medium ${postText.length > 3000 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                    {postText.length} / 3000
+                  </span>
                 </div>
                 <textarea
                   placeholder="Escribe aquí el contenido de tu publicación..."
@@ -1508,22 +1652,12 @@ const ManualPostScreen: React.FC = () => {
               </div>
             </Card>
 
-            {/* Redes sociales */}
             <Card>
-              <div className="space-y-4">
-                <h3 className="font-semibold">Redes de destino</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {(Object.keys(networks) as (keyof typeof networks)[]).map(net => (
-                    <button key={net} onClick={() => setNetworks(prev => ({ ...prev, [net]: !prev[net] }))}
-                      className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all font-medium text-sm
-                        ${networks[net]
-                          ? 'border-[#667eea] bg-purple-50 text-[#667eea]'
-                          : 'border-border bg-transparent text-muted-foreground hover:border-border/80 hover:bg-accent/40'}`}>
-                      <span className={networks[net] ? networkColors[net] : ''}>{networkIcons[net]}</span>
-                      {net.charAt(0).toUpperCase() + net.slice(1)}
-                      {networks[net] && <Check className="w-4 h-4 ml-auto text-[#667eea]" />}
-                    </button>
-                  ))}
+              <div className="flex items-center gap-3">
+                <Linkedin className="w-6 h-6 text-[#0a66c2] shrink-0" />
+                <div>
+                  <h3 className="font-semibold">Destino</h3>
+                  <p className="text-xs text-muted-foreground">Publicación en LinkedIn (Postiz + n8n)</p>
                 </div>
               </div>
             </Card>
@@ -1560,7 +1694,7 @@ const ManualPostScreen: React.FC = () => {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-emerald-800">Publicación inmediata</p>
-                      <p className="text-xs text-emerald-600 mt-0.5">Se enviará a las redes seleccionadas ahora mismo</p>
+                      <p className="text-xs text-emerald-600 mt-0.5">Se enviará a LinkedIn ahora mismo</p>
                     </div>
                   </div>
                 )}
@@ -1631,34 +1765,16 @@ const ManualPostScreen: React.FC = () => {
             <Card>
               <div className="space-y-3">
                 <h3 className="font-semibold text-sm">Vista previa</h3>
-                {activeNetworks.length > 0 ? (
-                  <>
-                    <div className="flex gap-1.5 flex-wrap">
-                      {activeNetworks.map(net => (
-                        <button key={net} onClick={() => setActivePreview(net as typeof activePreview)}
-                          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all
-                            ${activePreview === net ? 'bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white' : 'bg-accent text-muted-foreground hover:text-foreground'}`}>
-                          {networkIcons[net]}{net.charAt(0).toUpperCase() + net.slice(1)}
-                        </button>
-                      ))}
-                    </div>
-                    <div className="max-h-[420px] overflow-y-auto">
-                      <SocialPostPreview
-                        network={activePreview}
-                        authorName="Campus Lands"
-                        authorInitials="CL"
-                        content={postText}
-                        imageUrl={uploadedFiles[0]?.preview ?? null}
-                        charLimit={charLimits[activePreview]}
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <div className="py-6 flex flex-col items-center gap-2 text-center">
-                    <Eye className="w-8 h-8 text-muted-foreground/40" />
-                    <p className="text-xs text-muted-foreground">Selecciona una red social para ver la vista previa</p>
-                  </div>
-                )}
+                <div className="max-h-[420px] overflow-y-auto">
+                  <SocialPostPreview
+                    network={RED_PRINCIPAL}
+                    authorName="Campus Lands"
+                    authorInitials="CL"
+                    content={postText}
+                    imageUrl={uploadedFiles[0]?.preview ?? null}
+                    charLimit={3000}
+                  />
+                </div>
               </div>
             </Card>
 
@@ -1667,7 +1783,7 @@ const ManualPostScreen: React.FC = () => {
               <Button variant="primary" className="w-full" size="lg"
                 icon={saving ? <Loader2 className="animate-spin" /> : scheduleMode === 'now' ? <Send /> : <CalendarClock />}
                 onClick={handleSchedule}
-                disabled={saving || !postText.trim() || activeNetworks.length === 0}>
+                disabled={saving || !postText.trim()}>
                 {saving ? 'Guardando…' : scheduleMode === 'now' ? 'Publicar ahora' : 'Programar publicación'}
               </Button>
               <Button variant="outline" className="w-full" icon={<Save />}
@@ -1676,7 +1792,7 @@ const ManualPostScreen: React.FC = () => {
                   await crearBorrador(user.uid, {
                     promptOriginal: 'Publicación manual',
                     tono: 'profesional',
-                    redesDestino: activeNetworks as RedSocial[],
+                    redesDestino: redesDestino,
                     contenidoGenerado: postText,
                     titulo: postText.slice(0, 80),
                   });
@@ -1714,7 +1830,7 @@ const ManualPostScreen: React.FC = () => {
 // PANTALLA 4: BORRADORES
 // ============================================================================
 
-const DraftsScreen: React.FC = () => {
+const DraftsScreen: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   const { user } = useAuth();
   const invalidate = useInvalidateCampus();
   const { data: drafts = [], isLoading, refetch } = useBorradores();
@@ -1733,11 +1849,8 @@ const DraftsScreen: React.FC = () => {
     rechazado: 'default',
   };
 
-  const networkIcons = {
+  const networkIcons: Partial<Record<RedSocial, React.ReactNode>> = {
     linkedin: <Linkedin className="w-4 h-4 text-blue-600" />,
-    instagram: <Instagram className="w-4 h-4 text-pink-600" />,
-    facebook: <Facebook className="w-4 h-4 text-blue-500" />,
-    twitter: <Twitter className="w-4 h-4" />
   };
 
   return (
@@ -1782,9 +1895,23 @@ const DraftsScreen: React.FC = () => {
                 <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">Cargando…</td></tr>
               )}
               {!isLoading && filtered.map((draft) => (
-                <tr key={draft.id} className="border-b border-border hover:bg-accent/50 transition-colors">
+                <tr
+                  key={draft.id}
+                  className="border-b border-border hover:bg-accent/50 transition-colors cursor-pointer"
+                  onClick={() => resumeBorradorAndNavigate(draft, onNavigate)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      resumeBorradorAndNavigate(draft, onNavigate);
+                    }
+                  }}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`Continuar borrador: ${draft.titulo || draft.promptOriginal.slice(0, 50)}`}
+                >
                   <td className="py-4 px-4">
                     <div className="font-medium">{draft.titulo || draft.promptOriginal.slice(0, 50)}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">Clic para continuar editando</div>
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center gap-2">
@@ -1807,8 +1934,21 @@ const DraftsScreen: React.FC = () => {
                     <div className="flex items-center justify-end gap-2">
                       <button
                         type="button"
+                        title="Continuar editando"
+                        className="p-2 hover:bg-accent rounded-lg transition-colors text-[#667eea]"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          resumeBorradorAndNavigate(draft, onNavigate);
+                        }}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        title="Eliminar"
                         className="p-2 hover:bg-accent rounded-lg transition-colors"
-                        onClick={async () => {
+                        onClick={async (e) => {
+                          e.stopPropagation();
                           if (!user || !confirm('¿Eliminar borrador?')) return;
                           await eliminarBorrador(draft.id);
                           invalidate();
@@ -1835,7 +1975,7 @@ const DraftsScreen: React.FC = () => {
             </div>
             <h3 className="text-lg font-semibold mb-2">No hay borradores</h3>
             <p className="text-muted-foreground mb-4">Crea tu primera publicación para verla aquí</p>
-            <Button variant="primary" icon={<Plus />}>
+            <Button variant="primary" icon={<Plus />} onClick={() => onNavigate('new-post')}>
               Nueva publicación
             </Button>
           </div>
@@ -1849,7 +1989,7 @@ const DraftsScreen: React.FC = () => {
 // PANTALLA 5: CALENDARIO
 // ============================================================================
 
-const CalendarScreen: React.FC = () => {
+const CalendarScreen: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   const { user } = useAuth();
   const invalidate = useInvalidateCampus();
   const now = new Date();
@@ -1904,7 +2044,7 @@ const CalendarScreen: React.FC = () => {
             Visualiza y organiza tus publicaciones programadas. Arrastra una publicación a otro día para reprogramarla.
           </p>
         </div>
-        <Button variant="primary" icon={<Plus />}>
+        <Button variant="primary" icon={<Plus />} onClick={() => onNavigate('new-post')}>
           Nueva publicación
         </Button>
       </div>
@@ -2015,9 +2155,7 @@ const CalendarScreen: React.FC = () => {
                         {fp.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
-                    {red === 'linkedin' && <Linkedin className="w-4 h-4 text-blue-600" />}
-                    {red === 'instagram' && <Instagram className="w-4 h-4 text-pink-600" />}
-                    {red === 'facebook' && <Facebook className="w-4 h-4 text-blue-500" />}
+                    <Linkedin className="w-4 h-4 text-blue-600" />
                   </div>
                   <div className="flex items-center gap-2 mt-3">
                     <button
@@ -2286,7 +2424,7 @@ const ChannelsScreen: React.FC = () => {
   const invalidate = useInvalidateCampus();
   const { data: canales, isLoading } = useCanales();
   const { stats } = useDashboardStats();
-  const [connectModal, setConnectModal] = useState<{ red: RedSocial; name: string } | null>(null);
+  const [connectModalOpen, setConnectModalOpen] = useState(false);
   const [oauthNotice, setOauthNotice] = useState<string | null>(null);
 
   React.useEffect(() => {
@@ -2308,29 +2446,17 @@ const ChannelsScreen: React.FC = () => {
     window.history.replaceState({}, '', window.location.pathname);
   }, [invalidate]);
 
-  const defs = [
-    { id: 'linkedin' as RedSocial, name: 'LinkedIn', icon: <Linkedin className="w-6 h-6 text-blue-600" />, color: 'bg-blue-50 border-blue-200' },
-    { id: 'instagram' as RedSocial, name: 'Instagram', icon: <Instagram className="w-6 h-6 text-pink-600" />, color: 'bg-pink-50 border-pink-200' },
-    { id: 'facebook' as RedSocial, name: 'Facebook', icon: <Facebook className="w-6 h-6 text-blue-500" />, color: 'bg-blue-50 border-blue-200' },
-    { id: 'twitter' as RedSocial, name: 'X (Twitter)', icon: <Twitter className="w-6 h-6" />, color: 'bg-gray-50 border-gray-200' },
-  ];
-
-  const channels = defs.map((d) => {
-    const c = canales?.[d.id];
-    return {
-      ...d,
-      connected: Boolean(c?.conectado),
-      account: c?.cuentaNombre ?? null,
-    };
-  });
-
-  const connectedCount = channels.filter((c) => c.connected).length;
+  const linkedinCanal = canales?.linkedin;
+  const linkedinConnected = Boolean(linkedinCanal?.conectado);
+  const linkedinAccount = linkedinCanal?.cuentaNombre ?? null;
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Canales conectados</h1>
-        <p className="text-muted-foreground">Gestiona las integraciones con tus redes sociales</p>
+        <h1 className="text-2xl font-bold mb-2">Canal LinkedIn</h1>
+        <p className="text-muted-foreground">
+          Conecta tu perfil LinkedIn con OAuth (LinkedIn Developers). Las publicaciones usan la API oficial.
+        </p>
       </div>
 
       {oauthNotice && (
@@ -2346,79 +2472,70 @@ const ChannelsScreen: React.FC = () => {
         </div>
         <div className="flex-1">
           <p className="text-sm text-blue-900">
-            <strong>LinkedIn:</strong> conecta con OAuth (API oficial) o usa Postiz como alternativa. Los tokens OAuth solo viven en el servidor.
+            <strong>LinkedIn OAuth.</strong> Autorizas tu cuenta en LinkedIn; los tokens quedan en el servidor de CampusSocial.
           </p>
         </div>
       </div>
 
-      {/* Channels Grid */}
-      <div className="grid md:grid-cols-2 gap-4">
-        {channels.map(channel => (
-          <Card key={channel.id} className={channel.connected ? channel.color : ''}>
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 bg-white rounded-xl flex items-center justify-center shadow-sm">
-                  {channel.icon}
-                </div>
-                <div>
-                  <div className="font-semibold flex items-center gap-2">
-                    {channel.name}
-                    {channel.connected && (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    )}
-                  </div>
-                  {channel.connected ? (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Conectado: <span className="font-medium">{channel.account}</span>
-                    </p>
-                  ) : (
-                    <p className="text-sm text-muted-foreground mt-1">No conectado</p>
-                  )}
-                </div>
-              </div>
+      <Card className={linkedinConnected ? 'bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900' : ''}>
+        <div className="flex items-start gap-4">
+          <div className="w-16 h-16 bg-white dark:bg-card rounded-xl flex items-center justify-center shadow-sm shrink-0">
+            <Linkedin className="w-8 h-8 text-[#0a66c2]" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="font-semibold text-lg flex items-center gap-2">
+              LinkedIn
+              {linkedinConnected && <CheckCircle2 className="w-5 h-5 text-emerald-600" />}
             </div>
-            
-            <div className="mt-4 pt-4 border-t border-border flex items-center gap-2">
-              {channel.connected ? (
-                <>
-                  <Button variant="ghost" size="sm" className="flex-1">
-                    Configurar
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="flex-1"
-                    onClick={async () => {
-                      if (!user) return;
-                      await guardarCanal(user.uid, channel.id, { conectado: false, cuentaNombre: null });
-                      invalidate();
-                    }}
-                  >
-                    Desconectar
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => setConnectModal({ red: channel.id, name: channel.name })}
-                >
-                  Conectar cuenta
-                </Button>
-              )}
-            </div>
-          </Card>
-        ))}
-      </div>
+            {linkedinConnected ? (
+              <p className="text-sm text-muted-foreground mt-1">
+                Conectado: <span className="font-medium text-foreground">{linkedinAccount}</span>
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground mt-1">Sin vincular — necesario para publicar automáticamente</p>
+            )}
+            <p className="text-xs text-muted-foreground mt-2">
+              Flujo: CampusSocial → API LinkedIn (ugcPosts). Opcional: n8n para generar contenido antes de publicar.
+            </p>
+          </div>
+        </div>
+        <div className="mt-6 pt-4 border-t border-border flex flex-wrap gap-2">
+          {linkedinConnected ? (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setConnectModalOpen(true)}
+              >
+                Reconfigurar
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={async () => {
+                  if (!user) return;
+                  await guardarCanal(user.uid, 'linkedin', { conectado: false, cuentaNombre: null });
+                  invalidate();
+                }}
+              >
+                Desconectar
+              </Button>
+            </>
+          ) : (
+            <Button variant="primary" size="sm" onClick={() => setConnectModalOpen(true)}>
+              Conectar LinkedIn
+            </Button>
+          )}
+        </div>
+      </Card>
 
       {/* Stats */}
       <div className="mt-8 grid md:grid-cols-3 gap-4">
         <Card className="text-center">
           <div className="text-3xl font-bold bg-gradient-to-r from-[#667eea] to-[#764ba2] bg-clip-text text-transparent">
-            {connectedCount}/4
+            {linkedinConnected ? '1/1' : '0/1'}
           </div>
-          <p className="text-sm text-muted-foreground mt-1">Canales conectados</p>
+          <p className="text-sm text-muted-foreground mt-1">LinkedIn conectado</p>
         </Card>
         <Card className="text-center">
           <div className="text-3xl font-bold text-emerald-600">{stats.publicados}</div>
@@ -2431,16 +2548,14 @@ const ChannelsScreen: React.FC = () => {
       </div>
 
       <ConnectChannelModal
-        isOpen={Boolean(connectModal)}
-        onClose={() => setConnectModal(null)}
-        channelName={connectModal?.name ?? ''}
-        red={connectModal?.red ?? 'linkedin'}
+        isOpen={connectModalOpen}
+        onClose={() => setConnectModalOpen(false)}
         onSuccess={async (data) => {
-          if (!user || !connectModal) return;
+          if (!user) return;
           await registrarActividad(user.uid, {
             tipo: 'publicado',
-            mensaje: `Canal ${connectModal.name} verificado: ${data.cuentaNombre}`,
-            red: connectModal.red,
+            mensaje: `LinkedIn vinculado: ${data.cuentaNombre}`,
+            red: 'linkedin',
           });
           invalidate();
         }}
@@ -2494,20 +2609,24 @@ const SettingsScreen: React.FC = () => {
         <Card>
           <h3 className="font-semibold mb-4 flex items-center gap-2">
             <Network className="w-5 h-5 text-emerald-600" />
-            Automatización n8n (Docker)
+            Automatización Make / n8n
           </h3>
           <div className="space-y-4">
             <Input
-              label="URL del webhook"
+              label="URL del webhook (Make o n8n)"
               value={automationWebhook}
               onChange={(e) => setAutomationWebhook(e.target.value)}
-              placeholder="https://tu-id.ngrok-free.dev/webhook/campus-post-form"
+              placeholder="https://hook.us2.make.com/xxxxxxxx"
             />
             <p className="text-xs text-muted-foreground">
-              Secreto en Backend: N8N_WEBHOOK_SECRET (header X-Campus-Secret). Guía: docs/N8N_DOCKER.md
+              Secreto en <code className="text-xs">Backend/.secret.local</code>:{' '}
+              <code className="text-xs">MAKE_WEBHOOK_SECRET</code> = API key del Custom webhook en Make
+              (no el token de API access). Headers: <code className="text-xs">x-make-apikey</code> y{' '}
+              <code className="text-xs">X-Campus-Secret</code>. Guía:{' '}
+              <code className="text-xs">Flujo_Automatizacion/POSTMAN_MAKE.md</code>
             </p>
             <p className="text-xs text-muted-foreground">
-              Local: <code className="text-xs">cd Flujo_Automatizacion &amp;&amp; docker compose up -d</code> → importar JSON → activar workflow.
+              n8n local: <code className="text-xs">cd Flujo_Automatizacion &amp;&amp; docker compose up -d</code>
             </p>
           </div>
         </Card>
@@ -2708,14 +2827,14 @@ export default function App({ productionMode = false }: { productionMode?: boole
       case 'drafts':
         return (
           <DashboardShell activeScreen="drafts" onNavigate={setCurrentScreen} onLogout={() => logout()}>
-            <DraftsScreen />
+            <DraftsScreen onNavigate={setCurrentScreen} />
           </DashboardShell>
         );
       
       case 'calendar':
         return (
           <DashboardShell activeScreen="calendar" onNavigate={setCurrentScreen} onLogout={() => logout()}>
-            <CalendarScreen />
+            <CalendarScreen onNavigate={setCurrentScreen} />
           </DashboardShell>
         );
       
