@@ -3,7 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import { CampusSocialLogo } from './components/CampusSocialLogo';
 import { useAuth } from '../context/AuthContext';
 import { mensajeErrorAuth } from '../lib/authErrors';
-import { hasRealFirebaseWebConfig } from '../lib/firebase';
+import { hasRealFirebaseWebConfig, useAuthEmulator } from '../lib/firebase';
 import App, { PublicLanding } from './App';
 
 /** Login + app; invitados ven landing primero */
@@ -109,7 +109,13 @@ export default function AuthGate() {
             onChange={(e) => setPassword(e.target.value)}
           />
           {error && <p className="text-sm text-red-600">{error}</p>}
-          {!hasRealFirebaseWebConfig && (
+          {useAuthEmulator && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+              Modo local: usa <strong>Crear cuenta</strong> o <strong>Entrar</strong> con correo/contraseña
+              (emulador Auth en <code className="text-[11px]">127.0.0.1:9099</code>).
+            </div>
+          )}
+          {!hasRealFirebaseWebConfig && !useAuthEmulator && (
             <div className="rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-900">
               Para <strong>Continuar con Google</strong>, agrega en <code className="text-[11px]">Frontend/.env</code>{' '}
               las claves <code className="text-[11px]">VITE_FIREBASE_API_KEY</code> y{' '}

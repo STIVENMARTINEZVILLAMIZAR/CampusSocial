@@ -9,7 +9,8 @@ const MAP: Record<string, string> = {
   'auth/weak-password': 'La contraseña debe tener al menos 6 caracteres.',
   'auth/popup-closed-by-user': 'Ventana de Google cerrada antes de terminar.',
   'auth/cancelled-popup-request': 'Inicio con Google cancelado.',
-  'auth/network-request-failed': 'Sin conexión. Revisa tu red.',
+  'auth/invalid-api-key': 'Clave Firebase inválida. Revisa VITE_FIREBASE_API_KEY en Frontend/.env.',
+  'auth/api-key-not-valid.-please-pass-a-valid-api-key.': 'API key Firebase inválida. Ejecuta: bash scripts/sync-firebase-web-env.sh',
   'permission-denied': 'Sin permiso en Firestore. ¿Emulador o reglas activas?',
 };
 

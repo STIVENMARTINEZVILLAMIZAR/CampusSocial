@@ -51,5 +51,10 @@ export function getLinkedInClientSecret(): string {
   }
   const env = process.env.LINKEDIN_CLIENT_SECRET?.trim();
   if (!env) throw new Error('LINKEDIN_CLIENT_SECRET no configurado en Backend/.secret.local');
+  if (/PEGA_AQUI|tu_primary_client_secret|placeholder/i.test(env)) {
+    throw new Error(
+      'LINKEDIN_CLIENT_SECRET inválido. Copia el Primary Client Secret desde LinkedIn Developers → Auth.'
+    );
+  }
   return env;
 }

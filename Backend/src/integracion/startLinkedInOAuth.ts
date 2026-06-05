@@ -3,6 +3,7 @@ import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { randomBytes } from 'crypto';
 import {
   getLinkedInClientId,
+  getLinkedInClientSecret,
   getLinkedInOAuthScopes,
 } from './linkedinOAuthConfig';
 
@@ -32,6 +33,7 @@ export const startLinkedInOAuth = onCall({ region: 'us-central1' }, async (reque
   let clientId: string;
   try {
     clientId = getLinkedInClientId();
+    getLinkedInClientSecret();
   } catch (e) {
     throw new HttpsError(
       'failed-precondition',

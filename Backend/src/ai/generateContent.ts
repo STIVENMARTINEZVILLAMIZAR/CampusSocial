@@ -61,7 +61,10 @@ Responde ÚNICAMENTE con JSON válido (sin markdown ni texto extra):
             imagenGenerada = true;
             if (img.model === 'pollinations-fallback') {
               imagenNota =
-                'Imagen de respaldo (cuota Google agotada). Para Nano Banana nativo: activa facturación en AI Studio y usa gemini-2.5-flash-image.';
+                'Imagen de respaldo Pollinations (cuota Google agotada). Para IA nativa: facturación en AI Studio + gemini-2.5-flash-image.';
+            } else if (img.model === 'picsum-fallback') {
+              imagenNota =
+                'Imagen stock de respaldo (Picsum). Para IA generada: clave AIzaSy en GEMINI_API_KEY y facturación en AI Studio.';
             }
           } else {
             imagenNota =

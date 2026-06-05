@@ -12,6 +12,7 @@
     "start": "npm run dev",
     "dev:kill": "powershell -ExecutionPolicy Bypass -File ../scripts/kill-emulator-ports.ps1",
     "dev": "node run-dev.cjs",
+    "dev:full": "EMULATORS=full node run-dev.cjs",
     "dev:win": "node run-dev.cjs",
     "dev:unix": "bash run-dev.sh",
     "seed": "node ../scripts/seed-firestore.mjs",

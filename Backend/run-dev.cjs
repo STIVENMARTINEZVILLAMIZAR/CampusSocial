@@ -8,6 +8,7 @@ const path = require('path');
 
 const backendDir = __dirname;
 const root = path.join(backendDir, '..');
+const emulators = process.env.EMULATORS || 'functions';
 
 function run(cmd, args, cwd = backendDir) {
   const result = spawnSync(cmd, args, { stdio: 'inherit', shell: true, cwd });
@@ -25,18 +26,21 @@ if (platform() === 'win32') {
     { stdio: 'inherit', shell: true, cwd: root }
   );
   run('npm', ['run', 'build']);
-  console.log('→ Iniciando emuladores: functions, firestore, storage (sin UI en puerto 4000)…');
-  run(
-    'firebase',
-    [
-      'emulators:start',
-      '--only',
-      'functions,firestore,storage',
-      '--project',
-      'campussocial-f56a0',
-    ],
-    root
-  );
+  if (emulators === 'full') {
+    console.log('→ Iniciando emuladores completos: functions, firestore, storage…');
+    run(
+      'firebase',
+      ['emulators:start', '--only', 'functions,firestore,storage', '--project', 'campussocial-f56a0'],
+      root
+    );
+  } else {
+    console.log('→ Iniciando emulador Functions (:5001). Firestore/Storage = producción.');
+    run(
+      'firebase',
+      ['emulators:start', '--only', 'functions', '--project', 'campussocial-f56a0'],
+      root
+    );
+  }
 } else {
   run('bash', ['run-dev.sh'], backendDir);
 }

@@ -46,7 +46,7 @@ import {
   useCampusSearch,
 } from '../hooks/useCampusData';
 import { useTheme } from '../context/ThemeContext';
-import { subirArchivoPublicacion } from '../lib/storage';
+import { subirArchivoPublicacion, resolverUrlPublicacion } from '../lib/storage';
 import { mensajeCallable } from '../lib/callableError';
 import { ChatMessageBody } from './components/ChatMessageBody';
 import { SocialPostPreview } from './components/SocialPostPreview';
@@ -820,6 +820,7 @@ type UploadedMedia = { name: string; type: string; preview?: string; file: File 
 const NewPostScreen: React.FC = () => {
   const { user, profile } = useAuth();
   const { data: config } = useConfiguracion();
+  const { data: canales } = useCanales();
   const invalidate = useInvalidateCampus();
   const initials = (profile?.nombre || user?.email || 'U').slice(0, 2).toUpperCase();
   const agentDraftApplied = useRef(false);
@@ -843,6 +844,7 @@ const NewPostScreen: React.FC = () => {
   const [isDraggingMedia, setIsDraggingMedia] = useState(false);
   const newPostFileRef = useRef<HTMLInputElement>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [makeWarning, setMakeWarning] = useState('');
 
   const platformsSelected = (): RedSocial[] => REDES_PUBLICACION;
 
@@ -861,11 +863,15 @@ const NewPostScreen: React.FC = () => {
   };
 
   const resolvePostImageUrl = async (): Promise<string | null> => {
-    if (generateImage && imagenUrl) return imagenUrl;
-    if (!generateImage && manualUploads[0]?.file && user) {
-      return subirArchivoPublicacion(user.uid, manualUploads[0].file);
+    if (!user) return null;
+    let url: string | null = null;
+    if (generateImage && imagenUrl) url = imagenUrl;
+    else if (!generateImage && manualUploads[0]?.file) {
+      url = await subirArchivoPublicacion(user.uid, manualUploads[0].file);
+    } else {
+      url = imagenUrl || null;
     }
-    return imagenUrl || null;
+    return resolverUrlPublicacion(user.uid, url);
   };
 
   const previewImageUrl =
@@ -1068,52 +1074,67 @@ const NewPostScreen: React.FC = () => {
   const handleSchedule = async () => {
     if (!user) return;
     if (scheduleMode === 'schedule' && (!scheduledDate || !scheduledTime)) return;
+    if (scheduleMode === 'now') {
+      const webhookNow = getAutomationWebhookUrl(config);
+      if (!webhookNow && !canales?.linkedin?.conectado) {
+        setErrorMsg('Configura la URL de Make en Ajustes o conecta LinkedIn en Canales.');
+        return;
+      }
+    }
     setIsGenerating(true);
     setErrorMsg('');
+    setMakeWarning('');
     try {
       const platforms: RedSocial[] = platformsSelected().length
         ? platformsSelected()
         : ['linkedin'];
       const finalImageUrl = await resolvePostImageUrl();
+      const postTitle = topic.slice(0, 80) || 'Publicación';
+      const postBody = generatedText || topic;
       const postId = await crearPublicacion(user.uid, {
-        titulo: topic.slice(0, 80) || 'Publicación',
-        contenido: generatedText || topic,
+        titulo: postTitle,
+        contenido: postBody,
         redesDestino: platforms,
         estado: scheduleMode === 'now' ? 'pendiente' : 'borrador',
         imagenUrl: finalImageUrl,
       });
 
       if (scheduleMode === 'now') {
-        await publishPostNowFn(postId);
         const webhookNow = getAutomationWebhookUrl(config);
         if (webhookNow) {
-          try {
-            await ejecutarFlujoPublicacion(
-              {
-                topic: topic.trim(),
-                tone,
-                include_image: Boolean(finalImageUrl),
-                telegram_notify: false,
-                schedule_now: true,
-                campus_published: true,
-                action: 'notify_published',
-                platforms,
-                body: generatedText || topic,
-                image_url: finalImageUrl,
-                post_id: postId,
-              },
-              webhookNow
-            );
-          } catch {
-            /* Make opcional; LinkedIn ya publicó vía OAuth */
-          }
+          const makeRes = await ejecutarFlujoPublicacion(
+            {
+              topic: topic.trim(),
+              tone,
+              title: postTitle,
+              include_image: Boolean(finalImageUrl),
+              telegram_notify: false,
+              schedule_now: true,
+              campus_published: false,
+              action: 'publish',
+              provider: 'make',
+              platforms,
+              body: postBody,
+              image_url: finalImageUrl,
+              post_id: postId,
+            },
+            webhookNow
+          );
+          await actualizarPublicacion(postId, { estado: 'publicado' });
+          setToastMsg(
+            makeRes.linkedin_status
+              ? `Publicado en LinkedIn vía Make (${makeRes.linkedin_status})`
+              : 'Publicado en LinkedIn vía Make'
+          );
+        } else {
+          await publishPostNowFn(postId);
+          setToastMsg('Publicación enviada a LinkedIn');
         }
         await registrarActividad(user.uid, {
           tipo: 'publicado',
-          mensaje: `Publicación IA enviada a ${platforms.join(', ')}`,
+          mensaje: `Publicación enviada a ${platforms.join(', ')}`,
           red: platforms[0],
         });
-        setToastMsg('Publicación enviada');
       } else {
         const iso = new Date(`${scheduledDate}T${scheduledTime}`).toISOString();
         await schedulePostFn(postId, iso, platforms);
@@ -1124,21 +1145,24 @@ const NewPostScreen: React.FC = () => {
               {
                 topic: topic.trim(),
                 tone,
+                title: postTitle,
                 include_image: Boolean(finalImageUrl),
                 telegram_notify: false,
                 schedule_now: false,
                 campus_published: false,
                 action: 'notify_scheduled',
                 platforms,
-                body: generatedText || topic,
+                body: postBody,
                 image_url: finalImageUrl,
                 post_id: postId,
                 scheduled_at: iso,
               },
               webhook
             );
-          } catch {
-            /* Make opcional; el calendario usa Firebase schedulePost */
+          } catch (makeErr) {
+            setMakeWarning(
+              `Make no respondió (${mensajeCallable(makeErr)}). Tu publicación ya está en el calendario.`
+            );
           }
         }
         setToastMsg('Publicación programada en el calendario');
@@ -1184,6 +1208,11 @@ const NewPostScreen: React.FC = () => {
           {errorMsg && (
             <p className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2">
               {errorMsg}
+            </p>
+          )}
+          {makeWarning && (
+            <p className="mt-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2">
+              {makeWarning} Puedes vaciar la URL de Make en Ajustes si no lo usas.
             </p>
           )}
         </div>
@@ -1445,6 +1474,8 @@ const NewPostScreen: React.FC = () => {
 
 const ManualPostScreen: React.FC = () => {
   const { user, profile } = useAuth();
+  const { data: config } = useConfiguracion();
+  const { data: canales } = useCanales();
   const invalidate = useInvalidateCampus();
   const [postText, setPostText] = useState('');
   const [saving, setSaving] = useState(false);
@@ -1496,6 +1527,13 @@ const ManualPostScreen: React.FC = () => {
       notify('El contenido no puede estar vacío.');
       return;
     }
+    if (scheduleMode === 'now') {
+      const webhookNow = getAutomationWebhookUrl(config);
+      if (!webhookNow && !canales?.linkedin?.conectado) {
+        notify('Configura la URL de Make en Ajustes o conecta LinkedIn en Canales.');
+        return;
+      }
+    }
     setSaving(true);
     try {
       const redes = redesDestino;
@@ -1511,7 +1549,32 @@ const ManualPostScreen: React.FC = () => {
         imagenUrl,
       });
       if (scheduleMode === 'now') {
-        await publishPostNowFn(postId);
+        const webhookNow = getAutomationWebhookUrl(config);
+        if (webhookNow) {
+          await ejecutarFlujoPublicacion(
+            {
+              topic: postText.slice(0, 80),
+              tone: 'profesional',
+              title: postText.slice(0, 80),
+              include_image: Boolean(imagenUrl),
+              telegram_notify: false,
+              schedule_now: true,
+              campus_published: false,
+              action: 'publish',
+              provider: 'make',
+              platforms: redes,
+              body: postText,
+              image_url: imagenUrl,
+              post_id: postId,
+            },
+            webhookNow
+          );
+          await actualizarPublicacion(postId, { estado: 'publicado' });
+          notify('Publicado en LinkedIn vía Make');
+        } else {
+          await publishPostNowFn(postId);
+          notify('Publicación enviada');
+        }
         await registrarActividad(user.uid, {
           tipo: 'publicado',
           mensaje: `Publicación manual enviada a ${redes.join(', ')}`,
@@ -2230,8 +2293,9 @@ const AgentScreen: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNav
       })
       .catch((e) => {
         setBackendOk(false);
-        setAiHint(mensajeCallable(e));
-        setError(mensajeCallable(e));
+        const msg = mensajeCallable(e);
+        setAiHint(msg);
+        setError(msg);
       });
   }, []);
 

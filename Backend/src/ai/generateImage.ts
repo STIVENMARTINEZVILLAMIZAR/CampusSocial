@@ -102,16 +102,40 @@ async function generatePollinationsFallback(prompt: string): Promise<GeneratedIm
   const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(short)}?width=1280&height=720&nologo=true&model=flux`;
   try {
     const res = await fetch(url, { signal: AbortSignal.timeout(90000) });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      logger.warn('Pollinations skip', { status: res.status });
+      return null;
+    }
     const buf = Buffer.from(await res.arrayBuffer());
     if (buf.length < 1000) return null;
     const mime = res.headers.get('content-type')?.split(';')[0] || 'image/jpeg';
     const out = toDataUrl(buf.toString('base64'), mime);
     out.model = 'pollinations-fallback';
-    logger.info('Imagen vía fallback Pollinations (activa Gemini image en AI Studio para Google nativo)');
+    logger.info('Imagen vía fallback Pollinations');
     return out;
   } catch (e) {
     logger.warn('Pollinations fallback failed', e);
+    return null;
+  }
+}
+
+/** Stock photo por seed (gratis) cuando Pollinations exige pago (402). */
+async function generatePicsumFallback(prompt: string): Promise<GeneratedImage | null> {
+  const { createHash } = await import('crypto');
+  const seed = createHash('md5').update(prompt).digest('hex').slice(0, 16);
+  const url = `https://picsum.photos/seed/${seed}/1280/720`;
+  try {
+    const res = await fetch(url, { signal: AbortSignal.timeout(30000), redirect: 'follow' });
+    if (!res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length < 1000) return null;
+    const mime = res.headers.get('content-type')?.split(';')[0] || 'image/jpeg';
+    const out = toDataUrl(buf.toString('base64'), mime);
+    out.model = 'picsum-fallback';
+    logger.info('Imagen vía fallback Picsum (stock)');
+    return out;
+  } catch (e) {
+    logger.warn('Picsum fallback failed', e);
     return null;
   }
 }
@@ -145,7 +169,9 @@ export async function generateGeminiImage(
   }
 
   if (usePollinationsFallback()) {
-    return generatePollinationsFallback(prompt);
+    const poll = await generatePollinationsFallback(prompt);
+    if (poll) return poll;
+    return generatePicsumFallback(prompt);
   }
 
   return null;

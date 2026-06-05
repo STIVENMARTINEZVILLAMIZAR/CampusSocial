@@ -1,8 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { completeLinkedInOAuth } from '../services/cloudFunctions';
 import { getLinkedInOAuthRedirectUri } from '../lib/linkedinOAuth';
+import { mensajeCallable } from '../lib/callableError';
+
+const OAUTH_DONE_PREFIX = 'campus-linkedin-oauth-done:';
 
 type Status = 'waiting_auth' | 'processing' | 'success' | 'error';
 
@@ -10,6 +13,7 @@ export function LinkedInOAuthCallback() {
   const { user, loading: authLoading } = useAuth();
   const [status, setStatus] = useState<Status>('waiting_auth');
   const [message, setMessage] = useState('Completando conexión con LinkedIn…');
+  const finishedRef = useRef(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -61,6 +65,17 @@ export function LinkedInOAuthCallback() {
       return;
     }
 
+    const doneKey = `${OAUTH_DONE_PREFIX}${state}`;
+    if (sessionStorage.getItem(doneKey) === '1') {
+      setStatus('success');
+      setMessage('LinkedIn ya estaba conectado.');
+      window.setTimeout(() => window.location.replace('/?linkedin=success'), 800);
+      return;
+    }
+
+    if (finishedRef.current) return;
+    finishedRef.current = true;
+
     let cancelled = false;
 
     const finish = async () => {
@@ -68,15 +83,17 @@ export function LinkedInOAuthCallback() {
       try {
         const res = await completeLinkedInOAuth({ code, state });
         if (cancelled) return;
+        sessionStorage.setItem(doneKey, '1');
         setStatus('success');
         setMessage(`Cuenta vinculada: ${res.cuentaNombre}`);
         window.setTimeout(() => {
-          window.location.replace('/');
+          window.location.replace('/?linkedin=success');
         }, 1500);
       } catch (e) {
         if (cancelled) return;
+        finishedRef.current = false;
         setStatus('error');
-        setMessage(e instanceof Error ? e.message : 'No se pudo completar la autorización');
+        setMessage(mensajeCallable(e));
       }
     };
 

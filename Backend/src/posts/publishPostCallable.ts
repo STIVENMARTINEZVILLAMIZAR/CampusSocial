@@ -23,10 +23,14 @@ export const publishPostNow = onCall(
       return { success: true, postId };
     } catch (err) {
       logger.error('publishPostNow error', err);
-      throw new HttpsError(
-        'internal',
-        err instanceof Error ? err.message : 'Error al publicar'
-      );
+      const msg = err instanceof Error ? err.message : 'Error al publicar';
+      if (/no encontrada|not found/i.test(msg)) {
+        throw new HttpsError('not-found', msg);
+      }
+      if (/LinkedIn no conectado|no autorizado/i.test(msg)) {
+        throw new HttpsError('failed-precondition', msg);
+      }
+      throw new HttpsError('internal', msg);
     }
   }
 );

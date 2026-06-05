@@ -23,7 +23,23 @@ export const completeLinkedInOAuth = onCall({ region: 'us-central1' }, async (re
   const pendingSnap = await pendingRef.get();
 
   if (!pendingSnap.exists) {
-    throw new HttpsError('failed-precondition', 'Sesión OAuth expirada o inválida. Vuelve a conectar.');
+    const tokensSnap = await db.collection('tokens_redes').doc(uid).get();
+    const linkedin = tokensSnap.data()?.linkedin as
+      | { accessToken?: string; displayName?: string; memberUrn?: string; email?: string | null }
+      | undefined;
+    if (linkedin?.accessToken && linkedin.displayName) {
+      logger.info('LinkedIn OAuth idempotent replay', { uid });
+      return {
+        ok: true,
+        cuentaNombre: linkedin.displayName,
+        memberUrn: linkedin.memberUrn ?? '',
+        email: linkedin.email ?? undefined,
+      };
+    }
+    throw new HttpsError(
+      'failed-precondition',
+      'Sesión OAuth expirada o inválida. Vuelve a Canales → Conectar LinkedIn e inicia el flujo de nuevo (no recargues esta página).'
+    );
   }
 
   const pending = pendingSnap.data()!;

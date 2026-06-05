@@ -31,8 +31,16 @@ export const triggerMakeWorkflow = onCall(
       );
     }
 
-    const borradorId = await crearBorradorEnFirestore(uid, payload);
-    const executionId = await registrarEjecucion(uid, payload, borradorId);
+    const action = payload.action ?? 'publish';
+    const skipBorrador =
+      action === 'notify_published' ||
+      action === 'notify_scheduled' ||
+      action === 'verify_channel';
+
+    const borradorId = skipBorrador ? '' : await crearBorradorEnFirestore(uid, payload);
+    const executionId = skipBorrador
+      ? `notify-${Date.now()}`
+      : await registrarEjecucion(uid, payload, borradorId);
     const secret = resolveAutomationWebhookSecret();
 
     const tokensSnap = await getFirestore().collection('tokens_redes').doc(uid).get();
@@ -67,11 +75,17 @@ export const triggerMakeWorkflow = onCall(
       }
 
       if (!res.ok) {
-        throw new Error(data.error ?? `Make HTTP ${res.status}`);
+        const detail = data.error ?? text.slice(0, 200) ?? `Make HTTP ${res.status}`;
+        logger.warn('Make scenario HTTP error', { status: res.status, action, detail });
+        throw new Error(
+          res.status >= 500
+            ? `Escenario Make falló (${res.status}). Revisa History en Make o desactiva el webhook en Ajustes.`
+            : detail
+        );
       }
 
-      logger.info('Make scenario OK', { uid, borradorId, executionId });
-      return { ...data, executionId, borradorId };
+      logger.info('Make scenario OK', { uid, borradorId, executionId, action });
+      return { ...data, executionId, borradorId: borradorId || undefined };
     } catch (err) {
       logger.error('Make scenario error', err);
       throw new HttpsError(

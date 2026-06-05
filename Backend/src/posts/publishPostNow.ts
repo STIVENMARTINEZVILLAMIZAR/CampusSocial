@@ -72,6 +72,13 @@ export async function publishPostById(postId: string, userId: string): Promise<v
     actualizadoEn: FieldValue.serverTimestamp(),
     fechaProgramada: null,
   });
+
+  if (!anyOk) {
+    const detalle = Object.entries(resultados)
+      .map(([red, r]) => `${red}: ${r?.error ?? 'error desconocido'}`)
+      .join(' · ');
+    throw new Error(detalle || 'No se pudo publicar en ninguna red');
+  }
 }
 
 export async function findDueScheduledPosts(): Promise<Array<{ id: string; creadoPor: string }>> {

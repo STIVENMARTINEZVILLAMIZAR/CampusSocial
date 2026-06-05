@@ -67,6 +67,8 @@ export type Borrador = {
   tono: string;
   redSocial?: string;
   redesDestino: RedSocial[];
+  imagenUrl?: string | null;
+  imagenConIa?: boolean;
   estado: EstadoBorrador;
   n8nExecutionId?: string | null;
   programadoPara?: Timestamp | null;

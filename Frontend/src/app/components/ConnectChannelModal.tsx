@@ -6,6 +6,7 @@ import {
   LINKEDIN_REDIRECT_URLS_TO_REGISTER,
 } from '../../lib/linkedinOAuth';
 import { LINKEDIN_DEVELOPERS_URL } from '../../lib/redesConfig';
+import { mensajeCallable } from '../../lib/callableError';
 
 type Props = {
   isOpen: boolean;
@@ -35,8 +36,7 @@ export function ConnectChannelModal({ isOpen, onClose }: Props) {
       const { authUrl } = await startLinkedInOAuth(redirectUri);
       window.location.assign(authUrl);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'No se pudo iniciar la autorización';
-      setError(msg);
+      setError(mensajeCallable(e));
       setLoading(false);
     }
   };
