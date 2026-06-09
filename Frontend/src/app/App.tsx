@@ -32,7 +32,7 @@ import {
   guardarCanal,
 } from '../lib/db';
 import { guardarConfiguracion } from '../lib/db/configuracion';
-import type { RedSocial, Borrador } from '../lib/db/types';
+import type { RedSocial, Borrador, Publicacion } from '../lib/db/types';
 import { CampusSocialLogo } from './components/CampusSocialLogo';
 import {
   useBorradores,
@@ -289,9 +289,10 @@ interface ModalProps {
   title: string;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  maxWidthClass?: string;
 }
 
-const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer }) => {
+const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer, maxWidthClass = 'max-w-md' }) => {
   if (!isOpen) return null;
   
   return (
@@ -308,7 +309,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, footer 
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          className="relative bg-card border border-border rounded-2xl shadow-2xl max-w-md w-full max-h-[80vh] overflow-hidden"
+          className={`relative bg-card border border-border rounded-2xl shadow-2xl ${maxWidthClass} w-full max-h-[90vh] overflow-hidden`}
         >
           <div className="flex items-center justify-between p-6 border-b border-border">
             <h3 className="text-lg font-semibold">{title}</h3>
@@ -2053,7 +2054,7 @@ const DraftsScreen: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNa
 // ============================================================================
 
 const CalendarScreen: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const invalidate = useInvalidateCampus();
   const now = new Date();
   const [viewDate, setViewDate] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
@@ -2061,6 +2062,10 @@ const CalendarScreen: React.FC<{ onNavigate: (screen: string) => void }> = ({ on
   const [draggingPostId, setDraggingPostId] = useState<string | null>(null);
   const [dropTargetDay, setDropTargetDay] = useState<number | null>(null);
   const [moving, setMoving] = useState(false);
+  const [previewPost, setPreviewPost] = useState<Publicacion | null>(null);
+  const dragRef = useRef(false);
+  const displayName = profile?.nombre || 'Campus Lands';
+  const initials = (profile?.nombre || user?.email || 'U').slice(0, 2).toUpperCase();
   const mes = viewDate.getMonth();
   const anio = viewDate.getFullYear();
   const { porDia, isLoading } = usePublicacionesProgramadas(mes, anio);
@@ -2197,14 +2202,31 @@ const CalendarScreen: React.FC<{ onNavigate: (screen: string) => void }> = ({ on
                 <div
                   key={post.id}
                   draggable={!moving}
-                  onDragStart={() => setDraggingPostId(post.id)}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    if (!dragRef.current) setPreviewPost(post);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setPreviewPost(post);
+                    }
+                  }}
+                  onDragStart={() => {
+                    dragRef.current = true;
+                    setDraggingPostId(post.id);
+                  }}
                   onDragEnd={() => {
                     setDraggingPostId(null);
                     setDropTargetDay(null);
+                    setTimeout(() => {
+                      dragRef.current = false;
+                    }, 0);
                   }}
-                  className={`p-3 bg-accent/50 rounded-xl hover:bg-accent transition-colors cursor-grab active:cursor-grabbing
-                    ${draggingPostId === post.id ? 'opacity-50 ring-2 ring-primary' : ''}`}
-                  title="Arrastra al calendario para cambiar la fecha"
+                  className={`p-3 bg-accent/50 rounded-xl hover:bg-accent transition-colors cursor-pointer
+                    ${draggingPostId === post.id ? 'opacity-50 ring-2 ring-primary cursor-grabbing' : 'active:cursor-grab'}`}
+                  title="Clic para previsualizar · arrastra para cambiar la fecha"
                 >
                   {post.imagenUrl && (
                     <img src={post.imagenUrl} alt="" className="w-full h-24 object-cover rounded-lg mb-2 pointer-events-none" />
@@ -2223,10 +2245,23 @@ const CalendarScreen: React.FC<{ onNavigate: (screen: string) => void }> = ({ on
                   <div className="flex items-center gap-2 mt-3">
                     <button
                       type="button"
+                      className="px-2 py-1 text-muted-foreground text-xs hover:bg-accent rounded-lg transition-colors flex items-center gap-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewPost(post);
+                      }}
+                    >
+                      <Eye className="w-3 h-3" />
+                      Ver
+                    </button>
+                    <button
+                      type="button"
                       className="px-2 py-1 text-red-600 text-xs hover:bg-red-50 rounded-lg transition-colors"
-                      onClick={async () => {
+                      onClick={async (e) => {
+                        e.stopPropagation();
                         if (!user || !confirm('¿Eliminar publicación?')) return;
                         await eliminarPublicacion(post.id);
+                        if (previewPost?.id === post.id) setPreviewPost(null);
                         invalidate();
                       }}
                     >
@@ -2246,6 +2281,47 @@ const CalendarScreen: React.FC<{ onNavigate: (screen: string) => void }> = ({ on
           ) : null}
         </Card>
       </div>
+
+      <Modal
+        isOpen={!!previewPost}
+        onClose={() => setPreviewPost(null)}
+        title={previewPost?.titulo || 'Vista previa'}
+        maxWidthClass="max-w-xl"
+        footer={
+          <Button variant="ghost" onClick={() => setPreviewPost(null)}>
+            Cerrar
+          </Button>
+        }
+      >
+        {previewPost && (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              {previewPost.fechaProgramada && (
+                <span className="inline-flex items-center gap-1.5">
+                  <Clock className="w-4 h-4" />
+                  {formatDateTime(toDate(previewPost.fechaProgramada))}
+                </span>
+              )}
+              <Badge variant={previewPost.estado === 'publicado' ? 'success' : 'default'}>
+                {previewPost.estado}
+              </Badge>
+              {previewPost.redesDestino.map((net) => (
+                <Badge key={net} variant="purple">
+                  {net}
+                </Badge>
+              ))}
+            </div>
+            <SocialPostPreview
+              network={previewPost.redesDestino[0] || RED_PRINCIPAL}
+              authorName={displayName}
+              authorInitials={initials}
+              content={previewPost.contenido}
+              imageUrl={previewPost.imagenUrl}
+              charLimit={3000}
+            />
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };
