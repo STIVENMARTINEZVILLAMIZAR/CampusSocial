@@ -57,7 +57,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown ni texto extra):
         if (keys.gemini) {
           const img = await generateGeminiImage(keys.gemini, `${prompt} — red ${red}`);
           if (img) {
-            imagenUrl = img.dataUrl;
+            imagenUrl = img.publicUrl ?? img.dataUrl;
             imagenGenerada = true;
             if (img.model === 'pollinations-fallback') {
               imagenNota =

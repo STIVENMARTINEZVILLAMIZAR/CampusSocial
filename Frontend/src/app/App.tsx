@@ -20,6 +20,7 @@ import {
   generateContent as generateContentFn,
   schedulePost as schedulePostFn,
   publishPostNow as publishPostNowFn,
+  processDueScheduledPosts,
 } from '../services/cloudFunctions';
 import {
   crearPublicacion,
@@ -46,13 +47,14 @@ import {
   useCampusSearch,
 } from '../hooks/useCampusData';
 import { useTheme } from '../context/ThemeContext';
-import { subirArchivoPublicacion, resolverUrlPublicacion } from '../lib/storage';
+import { subirArchivoPublicacion, resolverUrlPublicacion, imagenQuedoSinResolver } from '../lib/storage';
 import { mensajeCallable } from '../lib/callableError';
 import { ChatMessageBody } from './components/ChatMessageBody';
 import { SocialPostPreview } from './components/SocialPostPreview';
 import { ConnectChannelModal } from './components/ConnectChannelModal';
 import { healthCheck } from '../services/cloudFunctions';
 import { toDate, formatRelative, formatDateTime } from '../lib/format';
+import { useFunctionsEmulator } from '../lib/firebase';
 import { consumePostDraftFromAgent, savePostDraftFromAgent } from '../lib/postDraftBridge';
 import { consumeBorradorResume, resumeBorradorAndNavigate } from '../lib/borradorResumeBridge';
 import { RED_PRINCIPAL, REDES_PUBLICACION } from '../lib/redesConfig';
@@ -1090,6 +1092,11 @@ const NewPostScreen: React.FC = () => {
         ? platformsSelected()
         : ['linkedin'];
       const finalImageUrl = await resolvePostImageUrl();
+      if (imagenQuedoSinResolver(imagenUrl || previewImageUrl, finalImageUrl)) {
+        setMakeWarning(
+          'Firebase Storage no está activo: la publicación irá solo con texto. Activa Storage en Firebase Console (plan Blaze) para incluir imágenes.'
+        );
+      }
       const postTitle = topic.slice(0, 80) || 'Publicación';
       const postBody = generatedText || topic;
       const postId = await crearPublicacion(user.uid, {
@@ -1540,7 +1547,13 @@ const ManualPostScreen: React.FC = () => {
       const redes = redesDestino;
       let imagenUrl: string | null = null;
       if (uploadedFiles[0]?.file) {
-        imagenUrl = await subirArchivoPublicacion(user.uid, uploadedFiles[0].file);
+        try {
+          imagenUrl = await subirArchivoPublicacion(user.uid, uploadedFiles[0].file);
+        } catch {
+          notify(
+            'No se pudo subir la imagen (Storage inactivo). Publicando solo texto. Activa Storage en Firebase Console.'
+          );
+        }
       }
       const postId = await crearPublicacion(user.uid, {
         titulo: postText.slice(0, 80),
@@ -2063,6 +2076,8 @@ const CalendarScreen: React.FC<{ onNavigate: (screen: string) => void }> = ({ on
   const [dropTargetDay, setDropTargetDay] = useState<number | null>(null);
   const [moving, setMoving] = useState(false);
   const [previewPost, setPreviewPost] = useState<Publicacion | null>(null);
+  const [schedulerMsg, setSchedulerMsg] = useState('');
+  const [publishingId, setPublishingId] = useState<string | null>(null);
   const dragRef = useRef(false);
   const displayName = profile?.nombre || 'Campus Lands';
   const initials = (profile?.nombre || user?.email || 'U').slice(0, 2).toUpperCase();
@@ -2080,6 +2095,58 @@ const CalendarScreen: React.FC<{ onNavigate: (screen: string) => void }> = ({ on
     () => Object.values(porDia).flat(),
     [porDia]
   );
+
+  const isPostOverdue = (post: Publicacion) => {
+    if (post.estado !== 'programado' || !post.fechaProgramada) return false;
+    return toDate(post.fechaProgramada).getTime() <= Date.now();
+  };
+
+  const overdueCount = useMemo(
+    () => allPostsInMonth.filter(isPostOverdue).length,
+    [allPostsInMonth]
+  );
+
+  useEffect(() => {
+    if (!user) return;
+
+    const tick = async () => {
+      try {
+        const res = await processDueScheduledPosts();
+        if (res.processed > 0) {
+          const ok = res.results.filter((r) => r.success).length;
+          const fail = res.results.filter((r) => !r.success);
+          if (ok > 0) {
+            setSchedulerMsg(`${ok} publicación(es) enviada(s) a LinkedIn.`);
+            invalidate();
+          }
+          if (fail.length > 0) {
+            setSchedulerMsg(fail[0]?.error ?? 'No se pudo publicar una programación.');
+          }
+        }
+      } catch {
+        /* backend apagado */
+      }
+    };
+
+    void tick();
+    const id = window.setInterval(() => void tick(), 60_000);
+    return () => window.clearInterval(id);
+  }, [user?.uid, invalidate]);
+
+  const publicarProgramadoAhora = async (post: Publicacion) => {
+    if (!user) return;
+    setPublishingId(post.id);
+    setSchedulerMsg('');
+    try {
+      await publishPostNowFn(post.id);
+      setSchedulerMsg('Publicación enviada a LinkedIn.');
+      invalidate();
+    } catch (e) {
+      setSchedulerMsg(mensajeCallable(e));
+    } finally {
+      setPublishingId(null);
+    }
+  };
 
   const reprogramarEnDia = async (postId: string, targetDay: number) => {
     const post = allPostsInMonth.find((p) => p.id === postId);
@@ -2116,6 +2183,27 @@ const CalendarScreen: React.FC<{ onNavigate: (screen: string) => void }> = ({ on
           Nueva publicación
         </Button>
       </div>
+
+      {useFunctionsEmulator && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <strong>Desarrollo local:</strong> el programador automático de Firebase no corre en el emulador.
+          Este calendario revisa cada minuto y publica lo vencido. En producción (plan Blaze + deploy) lo hace{' '}
+          <code className="text-xs">scheduledPublisher</code> en la nube.
+        </div>
+      )}
+
+      {overdueCount > 0 && (
+        <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+          {overdueCount} publicación(es) pasaron su hora y siguen programadas. Se publicarán automáticamente en el
+          próximo ciclo (cada 1 min) o usa <strong>Publicar ahora</strong>.
+        </div>
+      )}
+
+      {schedulerMsg && (
+        <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          {schedulerMsg}
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-[1fr_320px] gap-6">
         {/* Calendar Grid */}
@@ -2198,6 +2286,7 @@ const CalendarScreen: React.FC<{ onNavigate: (screen: string) => void }> = ({ on
               {selectedPosts.map((post) => {
                 const fp = toDate(post.fechaProgramada);
                 const red = post.redesDestino[0];
+                const overdue = isPostOverdue(post);
                 return (
                 <div
                   key={post.id}
@@ -2243,6 +2332,24 @@ const CalendarScreen: React.FC<{ onNavigate: (screen: string) => void }> = ({ on
                     <Linkedin className="w-4 h-4 text-blue-600" />
                   </div>
                   <div className="flex items-center gap-2 mt-3">
+                    {overdue && (
+                      <button
+                        type="button"
+                        disabled={publishingId === post.id}
+                        className="px-2 py-1 text-emerald-700 text-xs hover:bg-emerald-50 rounded-lg transition-colors flex items-center gap-1 font-medium"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          void publicarProgramadoAhora(post);
+                        }}
+                      >
+                        {publishingId === post.id ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Send className="w-3 h-3" />
+                        )}
+                        Publicar ahora
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="px-2 py-1 text-muted-foreground text-xs hover:bg-accent rounded-lg transition-colors flex items-center gap-1"

@@ -54,7 +54,7 @@ Cloud Functions de **todo** CampusSocial:
 ## Comandos
 
 ```bash
-cd Fontend && npm run dev
+cd Frontend && npm run dev
 cd Backend && npm run build
 firebase deploy --only firestore,functions,hosting
 ```

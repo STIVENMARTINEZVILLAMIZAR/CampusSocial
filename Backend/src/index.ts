@@ -10,7 +10,9 @@ export { generateContent } from "./ai/generateContent";
 export { chatWithAgent } from "./ai/chatWithAgent";
 export { schedulePost } from "./posts/schedulePost";
 export { publishPostNow } from "./posts/publishPostCallable";
+export { uploadPublicationImage } from "./posts/uploadPublicationImage";
 export { scheduledPublisher } from "./posts/scheduledPublisher";
+export { processDueScheduledPosts } from "./posts/processDueScheduledPosts";
 export { triggerMakeWorkflow } from "./integracion/triggerMakeWorkflow";
 /** @deprecated usar triggerMakeWorkflow */
 export { triggerN8nWorkflow } from "./integracion/triggerN8nWorkflow";

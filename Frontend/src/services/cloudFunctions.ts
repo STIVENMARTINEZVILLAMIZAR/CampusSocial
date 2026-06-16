@@ -70,6 +70,15 @@ export async function publishPostNow(postId: string) {
   return res.data;
 }
 
+export async function processDueScheduledPosts() {
+  const fn = httpsCallable<
+    Record<string, never>,
+    { processed: number; results: { postId: string; success: boolean; error?: string }[] }
+  >(functions, 'processDueScheduledPosts');
+  const res = await fn({});
+  return res.data;
+}
+
 export async function verifyChannelConnection(input: {
   red: string;
   integrationId?: string;

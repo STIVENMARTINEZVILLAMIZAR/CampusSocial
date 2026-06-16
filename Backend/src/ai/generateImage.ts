@@ -1,6 +1,12 @@
 import * as logger from 'firebase-functions/logger';
 
-export type GeneratedImage = { dataUrl: string; mimeType: string; model: string };
+export type GeneratedImage = {
+  dataUrl: string;
+  mimeType: string;
+  model: string;
+  /** URL https pública (Pollinations/Picsum) — LinkedIn la usa sin Firebase Storage */
+  publicUrl?: string;
+};
 
 const IMAGEN_MODELS = ['imagen-4.0-fast-generate-001', 'imagen-4.0-generate-001'];
 
@@ -111,6 +117,7 @@ async function generatePollinationsFallback(prompt: string): Promise<GeneratedIm
     const mime = res.headers.get('content-type')?.split(';')[0] || 'image/jpeg';
     const out = toDataUrl(buf.toString('base64'), mime);
     out.model = 'pollinations-fallback';
+    out.publicUrl = url;
     logger.info('Imagen vía fallback Pollinations');
     return out;
   } catch (e) {
@@ -132,6 +139,7 @@ async function generatePicsumFallback(prompt: string): Promise<GeneratedImage | 
     const mime = res.headers.get('content-type')?.split(';')[0] || 'image/jpeg';
     const out = toDataUrl(buf.toString('base64'), mime);
     out.model = 'picsum-fallback';
+    out.publicUrl = url;
     logger.info('Imagen vía fallback Picsum (stock)');
     return out;
   } catch (e) {

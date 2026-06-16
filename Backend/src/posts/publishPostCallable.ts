@@ -27,7 +27,10 @@ export const publishPostNow = onCall(
       if (/no encontrada|not found/i.test(msg)) {
         throw new HttpsError('not-found', msg);
       }
-      if (/LinkedIn no conectado|no autorizado/i.test(msg)) {
+      if (/LinkedIn no conectado|no autorizado|w_member_social|Share on LinkedIn|permiso para publicar/i.test(msg)) {
+        throw new HttpsError('failed-precondition', msg);
+      }
+      if (/linkedin.*403|ACCESS_DENIED|ugcPosts/i.test(msg)) {
         throw new HttpsError('failed-precondition', msg);
       }
       throw new HttpsError('internal', msg);
