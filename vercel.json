@@ -3,6 +3,20 @@
   "installCommand": "npm install --prefix Frontend",
   "buildCommand": "npm run build --prefix Frontend",
   "outputDirectory": "Frontend/dist",
+  "env": {
+    "VITE_APP_MODE": "production",
+    "VITE_FIREBASE_API_KEY": "AIzaSyCmiTj867qUDhoGHs-9n2NLyzp6fFWpyWo",
+    "VITE_FIREBASE_AUTH_DOMAIN": "campussocial-f56a0.firebaseapp.com",
+    "VITE_FIREBASE_PROJECT_ID": "campussocial-f56a0",
+    "VITE_FIREBASE_STORAGE_BUCKET": "campussocial-f56a0.firebasestorage.app",
+    "VITE_FIREBASE_MESSAGING_SENDER_ID": "1038967496505",
+    "VITE_FIREBASE_APP_ID": "1:1038967496505:web:599ce2839443878e8812e8",
+    "VITE_FIREBASE_MEASUREMENT_ID": "G-JM9TJPJ9NJ",
+    "VITE_USE_FIREBASE_EMULATOR": "false",
+    "VITE_USE_FUNCTIONS_EMULATOR": "false",
+    "VITE_USE_AUTH_EMULATOR": "false",
+    "VITE_LINKEDIN_OAUTH_REDIRECT_URI": "https://campus-social-indol.vercel.app/oauth/linkedin"
+  },
   "rewrites": [
     {
       "source": "/(.*)",
