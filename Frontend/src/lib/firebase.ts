@@ -6,10 +6,10 @@ import { connectStorageEmulator, getStorage } from 'firebase/storage';
 
 const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID || 'campussocial-f56a0';
 
-/** Firebase rechaza apiKey vacío/undefined; en dev usamos placeholder hasta tener .env real. */
+/** Firebase rechaza apiKey vacío; placeholder evita pantalla en blanco si falta .env. */
 function envOrDevFallback(value: string | undefined, devFallback: string): string {
   if (value && value.trim()) return value.trim();
-  return import.meta.env.DEV ? devFallback : '';
+  return devFallback;
 }
 
 const firebaseConfig = {

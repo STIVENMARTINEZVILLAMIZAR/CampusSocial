@@ -22,9 +22,18 @@ Alternativa en el dashboard (Settings → General):
 
 Si usas Root Directory = `Frontend`, el `vercel.json` de la raíz sigue siendo válido para el monorepo completo.
 
-## Variables de entorno (obligatorias)
+## Variables de entorno
 
-En Vercel → **Settings → Environment Variables** (Production):
+Vite **incrusta** las variables `VITE_*` en el build. Si faltan en Vercel, la app queda en blanco (Firebase sin `apiKey`).
+
+### Opción A — archivo en el repo (recomendado para este proyecto)
+
+El archivo `Frontend/.env.production` ya incluye el SDK web de Firebase y `VITE_APP_MODE=production`.  
+Solo haz push y redeploy.
+
+### Opción B — panel de Vercel
+
+En **Settings → Environment Variables** (Production), define las mismas claves que en `.env.production` y redeploy.
 
 ```env
 VITE_APP_MODE=production
@@ -47,6 +56,15 @@ bash scripts/sync-firebase-web-env.sh
 ```
 
 **Importante:** con `VITE_USE_FUNCTIONS_EMULATOR=true` la app intentará llamar a `localhost:5001` y fallará en producción.
+
+## Firebase Auth — dominio autorizado
+
+En [Firebase Console → Authentication → Settings → Authorized domains](https://console.firebase.google.com/project/campussocial-f56a0/authentication/settings), agrega:
+
+- `campus-social-indol.vercel.app`
+- Tu dominio custom si usas uno
+
+Sin esto, Google Sign-In fallará aunque la app cargue.
 
 ## Backend (IA, OAuth, publicaciones)
 
