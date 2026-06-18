@@ -6,10 +6,18 @@ El repo es un **monorepo**: la web está en `Frontend/` (Vite + React). El backe
 
 Vercel intentaba desplegar la **raíz del repo**, que no tiene `package.json` ni `index.html`. El `vercel.json` en la raíz apunta el build a `Frontend/dist`.
 
-## Redeploy
+## Redeploy (importante)
 
-1. Haz commit y push de `vercel.json`.
-2. En Vercel → **Deployments** → **Redeploy** (o espera el deploy automático del push).
+1. Haz push a `main`.
+2. En Vercel → **Deployments**, busca el commit `fix: incluir Firebase en build de producción para Vercel`.
+3. Si no es **Production Current**, abre ese deploy → **⋯** → **Promote to Production**.
+4. Si la web sigue igual, **Redeploy** con **Use existing Build Cache** desactivado.
+
+Comprueba que el build nuevo genera un JS distinto (no `index-BRcwzZdz.js`). En consola del navegador → Network, el bundle debe contener la clave Firebase (`AIzaSy…`).
+
+## URLs de preview protegidas
+
+Las URLs `campus-social-….vercel.app` (preview) pueden tener **Deployment Protection** y verse en blanco o pedir login de Vercel. Prueba siempre el dominio de producción: `campus-social-indol.vercel.app`.
 
 Alternativa en el dashboard (Settings → General):
 
