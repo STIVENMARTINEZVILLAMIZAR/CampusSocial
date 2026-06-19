@@ -158,7 +158,7 @@ export function usePublicacionesProgramadas(mes: number, anio: number) {
         const date =
           d && typeof d === 'object' && 'toDate' in d
             ? (d as { toDate: () => Date }).toDate()
-            : new Date(d as string);
+            : new Date(d as unknown as string);
         if (date.getMonth() === mes && date.getFullYear() === anio) {
           const day = date.getDate();
           if (!map[day]) map[day] = [];

@@ -10,7 +10,7 @@ import {
   Filter, Copy, Download, Mail, LogOut, Moon, Sun,
   User, ChevronLeft,
   Upload, Image, Video, FileUp, CalendarClock,
-  AlarmClock, Globe, ChevronRight, Info
+  AlarmClock, Globe, ChevronRight, Info, Menu, Activity
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
@@ -65,7 +65,7 @@ import { RED_PRINCIPAL, REDES_PUBLICACION } from '../lib/redesConfig';
 
 // Button Component
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'success' | 'destructive' | 'outline';
+  variant?: 'primary' | 'secondary' | 'ghost' | 'success' | 'destructive' | 'outline' | 'liquid';
   size?: 'sm' | 'md' | 'lg';
   icon?: React.ReactNode;
   children: React.ReactNode;
@@ -80,10 +80,11 @@ const Button: React.FC<ButtonProps> = ({
   disabled,
   ...props 
 }) => {
-  const baseStyles = 'inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
+  const baseStyles = 'inline-flex items-center justify-center gap-2 rounded-2xl font-medium transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed';
   
   const variants = {
-    primary: 'bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white hover:shadow-lg hover:shadow-purple-500/30 hover:scale-[1.02] active:scale-[0.98]',
+    primary: 'bg-[#0f172a] dark:bg-[#f8fafc] text-white dark:text-[#0f172a] hover:bg-[#1e293b] dark:hover:bg-[#e2e8f0]',
+    liquid: 'relative overflow-hidden bg-gradient-to-r from-[#1e3a8a] to-[#06b6d4] text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.2),0_4px_15px_rgba(6,182,212,0.2)] hover:shadow-[inset_0_1px_1px_rgba(255,255,255,0.3),0_6px_20px_rgba(6,182,212,0.3)] hover:-translate-y-[1px] border-0 outline-none ring-0',
     secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
     ghost: 'bg-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground',
     success: 'bg-[#10b981] text-white hover:bg-[#059669] hover:shadow-lg hover:shadow-emerald-500/30',
@@ -103,7 +104,7 @@ const Button: React.FC<ButtonProps> = ({
       disabled={disabled}
       {...props}
     >
-      {icon && <span className="w-4 h-4">{icon}</span>}
+      {icon && <span className="flex items-center justify-center shrink-0 [&>svg]:w-5 [&>svg]:h-5">{icon}</span>}
       {children}
     </button>
   );
@@ -122,7 +123,7 @@ const Input: React.FC<InputProps> = ({ label, error, icon, className = '', ...pr
       {label && <label className="text-sm font-medium text-foreground">{label}</label>}
       <div className="relative">
         {icon && (
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">
             {icon}
           </div>
         )}
@@ -191,7 +192,7 @@ const Select: React.FC<SelectProps> = ({ label, options, className = '', ...prop
 
 // Toggle Component
 interface ToggleProps {
-  label: string;
+  label?: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
   disabled?: boolean;
@@ -199,17 +200,17 @@ interface ToggleProps {
 
 const Toggle: React.FC<ToggleProps> = ({ label, checked, onChange, disabled = false }) => {
   return (
-    <label className="flex items-center justify-between cursor-pointer">
-      <span className="text-sm font-medium text-foreground">{label}</span>
+    <label className="flex items-center justify-between cursor-pointer gap-2">
+      {label && <span className="text-sm font-medium text-foreground">{label}</span>}
       <div 
         onClick={() => !disabled && onChange(!checked)}
-        className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${
-          checked ? 'bg-gradient-to-r from-[#667eea] to-[#764ba2]' : 'bg-switch-background'
+        className={`w-11 h-6 rounded-full transition-colors duration-300 flex items-center p-0.5 ${
+          checked ? 'bg-gradient-to-r from-[#1e3a8a] to-[#06b6d4] justify-end' : 'bg-switch-background justify-start'
         } ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
       >
         <motion.div 
-          className="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow-sm"
-          animate={{ x: checked ? 20 : 0 }}
+          layout
+          className="w-5 h-5 bg-white rounded-full shadow-sm"
           transition={{ type: 'spring', stiffness: 500, damping: 30 }}
         />
       </div>
@@ -219,7 +220,7 @@ const Toggle: React.FC<ToggleProps> = ({ label, checked, onChange, disabled = fa
 
 // Checkbox Component
 interface CheckboxProps {
-  label: string;
+  label?: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
   disabled?: boolean;
@@ -232,14 +233,14 @@ const Checkbox: React.FC<CheckboxProps> = ({ label, checked, onChange, disabled 
       <div 
         onClick={() => !disabled && onChange(!checked)}
         className={`w-5 h-5 rounded-lg border-2 transition-all duration-200 flex items-center justify-center
-          ${checked ? 'bg-gradient-to-r from-[#667eea] to-[#764ba2] border-transparent' : 'border-input bg-input-background'}
+          ${checked ? 'bg-gradient-to-r from-[#1e3a8a] to-[#06b6d4] border-transparent' : 'border-input bg-input-background'}
           ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-ring'}`}
       >
         {checked && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
       </div>
       <div className="flex items-center gap-2">
         {icon && <span className="w-4 h-4 text-muted-foreground">{icon}</span>}
-        <span className="text-sm font-medium text-foreground">{label}</span>
+        {label && <span className="text-sm font-medium text-foreground">{label}</span>}
       </div>
     </label>
   );
@@ -276,8 +277,8 @@ interface CardProps {
 
 const Card: React.FC<CardProps> = ({ children, className = '', hover = false }) => {
   return (
-    <div className={`bg-card border border-border rounded-xl p-6 transition-all duration-200 
-      ${hover ? 'hover:shadow-lg hover:shadow-purple-500/5 hover:border-purple-200' : 'shadow-sm'}
+    <div className={`bg-white dark:bg-card border border-slate-100 dark:border-border rounded-3xl p-6 transition-all duration-200 
+      ${hover ? 'hover:shadow-2xl hover:shadow-[#06b6d4]/10 hover:border-[#06b6d4]/20 hover:-translate-y-1' : 'shadow-[0_8px_30px_rgb(0,0,0,0.04)]'}
       ${className}`}>
       {children}
     </div>
@@ -381,230 +382,248 @@ const Skeleton: React.FC<{ className?: string }> = ({ className = '' }) => {
 
 const LandingPage: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNavigate }) => {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-accent/30">
+    <div className="min-h-screen bg-gradient-to-br from-[#f8fafc] via-[#eff6ff] to-[#f0fdfa] dark:from-background dark:via-background dark:to-background/90 overflow-hidden relative">
+      {/* Background Orbs */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden z-0 pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-gradient-to-br from-[#06b6d4]/20 to-[#1e3a8a]/20 blur-[120px] animate-pulse-slow" />
+        <div className="absolute top-[40%] right-[-10%] w-[30%] h-[50%] rounded-full bg-gradient-to-br from-[#2BBDE8]/20 to-[#0B1F4B]/20 blur-[100px]" style={{ animation: 'pulse 8s infinite alternate' }} />
+      </div>
+
       {/* Header */}
-      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-40">
+      <motion.header 
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="border-b border-white/40 dark:border-border/50 bg-white/60 dark:bg-card/80 backdrop-blur-xl sticky top-0 z-40 shadow-sm"
+      >
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CampusSocialLogo size="lg" className="!gap-2" />
           </div>
           <div className="flex items-center gap-3">
-            <Button variant="primary" size="sm" onClick={() => onNavigate('login')}>
+            <Button variant="liquid" size="md" onClick={() => onNavigate('login')} className="shadow-md shadow-[#06b6d4]/20 font-semibold px-6">
               Iniciar sesión
             </Button>
           </div>
         </div>
-      </header>
+      </motion.header>
 
       {/* Hero Section */}
-      <section className="max-w-7xl mx-auto px-6 py-20">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <div className="space-y-6">
-            <Badge variant="purple">🚀 Potenciado por IA</Badge>
-            <h1 className="text-5xl font-bold leading-tight">
+      <section className="max-w-7xl mx-auto px-6 py-24 relative z-10">
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
+          <motion.div 
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+            className="space-y-8"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/60 dark:bg-accent/40 backdrop-blur-md border border-white/60 dark:border-border shadow-sm">
+              <Sparkles className="w-4 h-4 text-[#06b6d4]" />
+              <span className="text-sm font-semibold bg-gradient-to-r from-[#1e3a8a] to-[#06b6d4] dark:from-[#60a5fa] dark:to-[#22d3ee] bg-clip-text text-transparent">Potenciado por Gemini IA</span>
+            </div>
+            <h1 className="text-5xl lg:text-6xl font-bold leading-tight tracking-tight text-foreground">
               Automatiza{' '}
-              <span className="bg-gradient-to-r from-[#667eea] to-[#764ba2] bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-[#0B1F4B] to-[#2BBDE8] dark:from-[#60a5fa] dark:to-[#22d3ee] bg-clip-text text-transparent relative">
                 LinkedIn
+                <span className="absolute bottom-1 left-0 w-full h-2 bg-[#06b6d4]/20 rounded-full -z-10 blur-[2px]" />
               </span>{' '}
               con Inteligencia Artificial
             </h1>
-            <p className="text-lg text-muted-foreground">
+            <p className="text-lg text-muted-foreground/90 leading-relaxed max-w-xl">
               CampusSocial automatiza publicaciones para Campus Lands en{' '}
-              <strong>LinkedIn</strong>: genera copy con IA, programa posts y publica de forma oficial vía Postiz y n8n.
+              <strong className="text-foreground">LinkedIn</strong>: genera copy con IA, programa posts y publica de forma oficial vía Postiz y n8n.
             </p>
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-4">
               <Button 
-                variant="primary" 
+                variant="liquid" 
                 size="lg" 
-                icon={<PenSquare />}
+                icon={<PenSquare className="w-5 h-5" />}
                 onClick={() => onNavigate('new-post')}
+                className="shadow-lg shadow-[#06b6d4]/30 hover:shadow-[#06b6d4]/40"
               >
                 Crear publicación
               </Button>
-              <Button variant="outline" size="lg" icon={<ArrowRight />} onClick={() => onNavigate('login')}>
-                Iniciar sesión
+              <Button 
+                variant="outline" 
+                size="lg" 
+                icon={<ArrowRight className="w-5 h-5" />} 
+                onClick={() => onNavigate('login')}
+                className="bg-white/50 backdrop-blur-md border-white/60 hover:bg-white/80 dark:bg-accent/50"
+              >
+                Ingresar al panel
               </Button>
             </div>
             <div className="flex items-center gap-6 pt-4">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                <span className="text-sm text-muted-foreground">Setup en 2 minutos</span>
+                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                </div>
+                <span className="text-sm font-medium text-foreground">Setup en 2 minutos</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                <span className="text-sm text-muted-foreground">Sin tarjeta de crédito</span>
+                <div className="w-6 h-6 rounded-full bg-[#06b6d4]/10 flex items-center justify-center">
+                  <CheckCircle2 className="w-4 h-4 text-[#06b6d4]" />
+                </div>
+                <span className="text-sm font-medium text-foreground">Aprobación inteligente</span>
               </div>
             </div>
-          </div>
+          </motion.div>
           
           {/* Illustration */}
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-indigo-500/20 rounded-3xl blur-3xl" />
-            <Card className="relative overflow-hidden">
-              <div className="space-y-4">
-                <div className="flex items-center justify-center gap-4 p-8">
-                  <div className="w-16 h-16 bg-gradient-to-br from-[#667eea] to-[#764ba2] rounded-2xl flex items-center justify-center">
-                    <Sparkles className="w-8 h-8 text-white" />
-                  </div>
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="relative"
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-[#06b6d4]/20 to-[#1e3a8a]/20 rounded-3xl blur-3xl transform rotate-3" />
+            <div className="relative bg-white/60 dark:bg-card backdrop-blur-2xl border border-white/60 dark:border-border/50 rounded-3xl overflow-hidden shadow-[0_20px_60px_rgb(0,0,0,0.08)]">
+              <div className="h-10 bg-white/40 dark:bg-accent/20 border-b border-white/40 flex items-center px-4 gap-2 backdrop-blur-md">
+                <div className="w-3 h-3 rounded-full bg-red-400" />
+                <div className="w-3 h-3 rounded-full bg-amber-400" />
+                <div className="w-3 h-3 rounded-full bg-emerald-400" />
+              </div>
+              <div className="p-8 sm:p-12 space-y-8">
+                <div className="flex items-center justify-center gap-4 sm:gap-8 relative z-10">
+                  <motion.div animate={{ y: [0, -8, 0] }} transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }} className="w-20 h-20 bg-gradient-to-br from-[#1e3a8a] to-[#06b6d4] rounded-3xl flex items-center justify-center shadow-lg shadow-[#06b6d4]/30 rotate-3">
+                    <Sparkles className="w-10 h-10 text-white" />
+                  </motion.div>
                   <div className="flex items-center gap-2">
-                    <ArrowRight className="w-6 h-6 text-muted-foreground" />
+                    <div className="w-2 h-2 rounded-full bg-muted-foreground/30" />
+                    <div className="w-2 h-2 rounded-full bg-muted-foreground/50" />
+                    <ArrowRight className="w-6 h-6 text-[#06b6d4]" />
                   </div>
-                  <div className="w-16 h-16 bg-[#0a66c2] rounded-xl flex items-center justify-center">
-                    <Linkedin className="w-8 h-8 text-white" />
-                  </div>
+                  <motion.div animate={{ y: [0, 8, 0] }} transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }} className="w-20 h-20 bg-[#0a66c2] rounded-3xl flex items-center justify-center shadow-lg shadow-[#0a66c2]/30 -rotate-3">
+                    <Linkedin className="w-10 h-10 text-white" />
+                  </motion.div>
                 </div>
-                <div className="bg-accent/50 p-4 rounded-xl space-y-2">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
+                <div className="bg-white/50 dark:bg-accent/30 p-6 rounded-2xl space-y-4 border border-white/50 shadow-inner backdrop-blur-sm">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#06b6d4]/20 to-[#1e3a8a]/20" />
+                    <div className="space-y-2">
+                      <div className="h-3 w-24 bg-muted/60 rounded-full" />
+                      <div className="h-2 w-16 bg-muted/40 rounded-full" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-3 w-full bg-[#06b6d4]/10 rounded-full" />
+                    <div className="h-3 w-[85%] bg-[#06b6d4]/10 rounded-full" />
+                    <div className="h-3 w-[60%] bg-[#06b6d4]/10 rounded-full" />
+                  </div>
                 </div>
               </div>
-            </Card>
-          </div>
+            </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="max-w-7xl mx-auto px-6 py-20">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">Todo lo que necesitas en una plataforma</h2>
-          <p className="text-muted-foreground">Potencia tu estrategia de contenido con tecnología de última generación</p>
+      <section className="max-w-7xl mx-auto px-6 py-24 relative z-10">
+        <div className="text-center mb-16">
+          <h2 className="text-3xl lg:text-4xl font-bold mb-4 text-foreground">Todo lo que necesitas en una plataforma</h2>
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">Potencia tu estrategia de contenido con tecnología de última generación</p>
         </div>
-        <div className="grid md:grid-cols-3 gap-6">
-          <Card hover>
-            <div className="space-y-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-xl flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold">Agente IA Gemini</h3>
-              <p className="text-muted-foreground">
-                Genera contenido atractivo y profesional en segundos. 
-                Nuestro agente entiende tu marca y crea posts optimizados para cada red social.
-              </p>
-              <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-sm">
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  <span>Copy persuasivo y relevante</span>
-                </li>
-                <li className="flex items-center gap-2 text-sm">
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  <span>Imágenes generadas con IA</span>
-                </li>
-                <li className="flex items-center gap-2 text-sm">
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  <span>Hashtags inteligentes</span>
-                </li>
-              </ul>
-            </div>
-          </Card>
-
-          <Card hover>
-            <div className="space-y-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-xl flex items-center justify-center">
-                <Network className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold">Automatización n8n</h3>
-              <p className="text-muted-foreground">
-                Conecta tu flujo con Docker local (gratis). 
-                Automatiza aprobaciones, notificaciones y publicación con tu JSON de workflow.
-              </p>
-              <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-sm">
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  <span>Workflows personalizables</span>
-                </li>
-                <li className="flex items-center gap-2 text-sm">
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  <span>Notificaciones Telegram</span>
-                </li>
-                <li className="flex items-center gap-2 text-sm">
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  <span>Integraciones ilimitadas</span>
-                </li>
-              </ul>
-            </div>
-          </Card>
-
-          <Card hover>
-            <div className="space-y-4">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center">
-                <Linkedin className="w-6 h-6 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold">Publicación Oficial LinkedIn</h3>
-              <p className="text-muted-foreground">
-                Publica directamente en LinkedIn con integración oficial vía Postiz. 
-                Sin límites, sin riesgos, 100% compatible con las APIs de LinkedIn.
-              </p>
-              <ul className="space-y-2">
-                <li className="flex items-center gap-2 text-sm">
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  <span>API oficial LinkedIn</span>
-                </li>
-                <li className="flex items-center gap-2 text-sm">
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  <span>Programación avanzada</span>
-                </li>
-                <li className="flex items-center gap-2 text-sm">
-                  <Check className="w-4 h-4 text-emerald-600" />
-                  <span>Análisis de rendimiento</span>
-                </li>
-              </ul>
-            </div>
-          </Card>
-        </div>
-      </section>
-
-      {/* How it works */}
-      <section className="max-w-7xl mx-auto px-6 py-20">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold mb-4">Cómo funciona</h2>
-          <p className="text-muted-foreground">De la idea a la publicación en 4 pasos simples</p>
-        </div>
-        <div className="grid md:grid-cols-4 gap-6">
+        <div className="grid md:grid-cols-3 gap-8">
           {[
-            { num: '1', icon: <PenSquare className="w-7 h-7 text-white" />, title: 'Escribe el tema', desc: 'Describe brevemente el tema de tu publicación' },
-            { num: '2', icon: <Sparkles className="w-7 h-7 text-white" />, title: 'IA genera contenido', desc: 'El agente crea copy profesional e imagen' },
-            { num: '3', icon: <Eye className="w-7 h-7 text-white" />, title: 'Revisa y edita', desc: 'Previsualiza en tiempo real y ajusta' },
-            { num: '4', icon: <Calendar className="w-7 h-7 text-white" />, title: 'Programa publicación', desc: 'Selecciona fecha/hora y publica' }
-          ].map((step, i) => (
-            <div key={i} className="relative">
-              <Card hover className="text-center">
-                <div className="space-y-4">
-                  <div className="relative inline-flex">
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#667eea] to-[#764ba2] rounded-full blur-xl opacity-30" />
-                    <div className="relative w-16 h-16 bg-gradient-to-br from-[#667eea] to-[#764ba2] rounded-full flex items-center justify-center">
-                      {step.icon}
-                    </div>
-                  </div>
-                  <div className="absolute -top-2 -left-2 w-8 h-8 bg-card border-2 border-purple-500 rounded-full flex items-center justify-center font-bold text-sm text-purple-600">
-                    {step.num}
-                  </div>
-                  <h4 className="font-semibold">{step.title}</h4>
-                  <p className="text-sm text-muted-foreground">{step.desc}</p>
+            {
+              title: 'Agente IA Gemini',
+              icon: <Sparkles className="w-6 h-6 text-[#06b6d4]" />,
+              desc: 'Genera contenido atractivo y profesional en segundos. Nuestro agente entiende tu marca y crea posts optimizados para cada red social.',
+              features: ['Copy persuasivo y relevante', 'Imágenes generadas con IA', 'Hashtags inteligentes']
+            },
+            {
+              title: 'Automatización n8n',
+              icon: <Network className="w-6 h-6 text-[#1e3a8a]" />,
+              desc: 'Conecta tu flujo con Docker local (gratis). Automatiza aprobaciones, notificaciones y publicación con tu JSON de workflow.',
+              features: ['Workflows personalizables', 'Notificaciones Telegram', 'Integraciones ilimitadas']
+            },
+            {
+              title: 'Publicación Oficial',
+              icon: <Linkedin className="w-6 h-6 text-[#0a66c2]" />,
+              desc: 'Publica directamente en LinkedIn con integración oficial vía Postiz. Sin límites, sin riesgos, 100% compatible con las APIs.',
+              features: ['API oficial LinkedIn', 'Programación avanzada', 'Análisis de rendimiento']
+            }
+          ].map((feature, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: i * 0.1 }}
+            >
+              <div className="bg-white/60 dark:bg-card backdrop-blur-xl border border-white/60 dark:border-border rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-2xl hover:shadow-[#06b6d4]/10 hover:-translate-y-2 transition-all duration-300 h-full">
+                <div className="w-14 h-14 bg-white dark:bg-accent/50 rounded-2xl flex items-center justify-center mb-6 shadow-sm border border-white/50 dark:border-border">
+                  {feature.icon}
                 </div>
-              </Card>
-              {i < 3 && (
-                <div className="hidden md:block absolute top-1/2 -right-3 transform -translate-y-1/2 z-10">
-                  <ArrowRight className="w-6 h-6 text-purple-400" />
-                </div>
-              )}
-            </div>
+                <h3 className="text-xl font-bold mb-4">{feature.title}</h3>
+                <p className="text-muted-foreground mb-6 leading-relaxed">
+                  {feature.desc}
+                </p>
+                <ul className="space-y-3">
+                  {feature.features.map((item, j) => (
+                    <li key={j} className="flex items-center gap-3 text-sm font-medium text-foreground">
+                      <div className="w-5 h-5 rounded-full bg-[#06b6d4]/10 flex items-center justify-center shrink-0">
+                        <Check className="w-3 h-3 text-[#06b6d4]" />
+                      </div>
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </motion.div>
           ))}
         </div>
       </section>
 
+      {/* How it works */}
+      <section className="max-w-7xl mx-auto px-6 py-12 relative z-10">
+        <div className="bg-white/40 dark:bg-card/40 backdrop-blur-2xl border border-white/60 dark:border-border/50 rounded-[3rem] p-12 md:p-16 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl lg:text-4xl font-bold mb-4">Cómo funciona</h2>
+            <p className="text-lg text-muted-foreground">De la idea a la publicación en 4 pasos simples</p>
+          </div>
+          <div className="grid md:grid-cols-4 gap-8 relative">
+            {[
+              { num: '1', icon: <PenSquare className="w-6 h-6 text-[#1e3a8a]" />, title: 'Escribe el tema', desc: 'Describe brevemente el tema' },
+              { num: '2', icon: <Sparkles className="w-6 h-6 text-[#06b6d4]" />, title: 'IA genera contenido', desc: 'El agente crea el copy' },
+              { num: '3', icon: <Eye className="w-6 h-6 text-[#1e3a8a]" />, title: 'Revisa y edita', desc: 'Ajusta en tiempo real' },
+              { num: '4', icon: <Calendar className="w-6 h-6 text-[#06b6d4]" />, title: 'Programa publicación', desc: 'Selecciona fecha y hora' }
+            ].map((step, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                className="relative text-center"
+              >
+                <div className="w-20 h-20 mx-auto bg-white/80 dark:bg-card backdrop-blur-md rounded-3xl flex items-center justify-center border border-white/60 shadow-lg shadow-[#06b6d4]/5 mb-6 relative group hover:-translate-y-1 transition-transform">
+                  <div className="absolute inset-0 bg-gradient-to-br from-[#1e3a8a]/5 to-[#06b6d4]/10 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="absolute -top-3 -right-3 w-8 h-8 bg-gradient-to-br from-[#1e3a8a] to-[#06b6d4] text-white rounded-full flex items-center justify-center font-bold text-sm shadow-sm border-2 border-white dark:border-background">
+                    {step.num}
+                  </div>
+                  {step.icon}
+                </div>
+                <h4 className="font-bold text-lg mb-2">{step.title}</h4>
+                <p className="text-sm text-muted-foreground">{step.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
-      <footer className="border-t border-border bg-card/50 mt-20">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="flex items-center justify-between">
+      <footer className="border-t border-white/40 dark:border-border bg-white/40 dark:bg-card/50 backdrop-blur-md relative z-10">
+        <div className="max-w-7xl mx-auto px-6 py-10">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <CampusSocialLogo size="sm" textClassName="!text-foreground font-semibold !bg-none" />
+              <CampusSocialLogo size="sm" textClassName="!text-foreground font-bold !bg-none" />
             </div>
-            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-sm text-muted-foreground">
-              <a href="/privacidad" className="hover:text-[#667eea] transition-colors">
+            <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-6 text-sm text-muted-foreground font-medium">
+              <a href="/privacidad" className="hover:text-[#06b6d4] transition-colors">
                 Política de privacidad
               </a>
-              <span className="hidden sm:inline text-border">·</span>
+              <span className="hidden sm:inline text-[#06b6d4]/30">•</span>
               <span>© 2026 Campuslands - Educación Tecnológica Colombia</span>
             </div>
           </div>
@@ -618,6 +637,65 @@ const LandingPage: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNav
 // PANTALLA 2: LOGIN + DASHBOARD SHELL (Sidebar + Topbar)
 // ============================================================================
 
+// Animated Search Bar with typing placeholder
+const SEARCH_PLACEHOLDERS = [
+  'Buscar publicaciones...',
+  'Buscar borradores...',
+  'Buscar canales...',
+  'Buscar en el calendario...',
+];
+
+const SearchBarAnimated: React.FC<{
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}> = ({ value, onChange }) => {
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [displayedPlaceholder, setDisplayedPlaceholder] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    if (value) return; // Don't animate when there's real input
+    const fullText = SEARCH_PLACEHOLDERS[placeholderIndex];
+    let timeout: ReturnType<typeof setTimeout>;
+
+    if (!isDeleting) {
+      if (displayedPlaceholder.length < fullText.length) {
+        timeout = setTimeout(() => {
+          setDisplayedPlaceholder(fullText.slice(0, displayedPlaceholder.length + 1));
+        }, 60);
+      } else {
+        timeout = setTimeout(() => setIsDeleting(true), 2000);
+      }
+    } else {
+      if (displayedPlaceholder.length > 0) {
+        timeout = setTimeout(() => {
+          setDisplayedPlaceholder(displayedPlaceholder.slice(0, -1));
+        }, 35);
+      } else {
+        setIsDeleting(false);
+        setPlaceholderIndex((i) => (i + 1) % SEARCH_PLACEHOLDERS.length);
+      }
+    }
+    return () => clearTimeout(timeout);
+  }, [displayedPlaceholder, isDeleting, placeholderIndex, value]);
+
+  return (
+    <div className="relative group">
+      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4 transition-colors group-focus-within:text-[#06b6d4]">
+        <Search />
+      </div>
+      <input
+        type="text"
+        placeholder={value ? '' : displayedPlaceholder}
+        className="w-full px-4 py-2.5 pl-10 bg-white/50 dark:bg-accent/30 border border-white/40 dark:border-border/50 rounded-2xl text-sm transition-all duration-300
+          focus:outline-none focus:ring-2 focus:ring-[#06b6d4]/30 focus:border-[#06b6d4]/40 focus:bg-white dark:focus:bg-card focus:shadow-lg focus:shadow-[#06b6d4]/5
+          hover:bg-white/70 dark:hover:bg-accent/50 hover:shadow-sm cursor-text"
+        value={value}
+        onChange={onChange}
+      />
+    </div>
+  );
+};
 const DashboardShell: React.FC<{
   children: React.ReactNode;
   activeScreen: string;
@@ -630,6 +708,7 @@ const DashboardShell: React.FC<{
   const [searchTerm, setSearchTerm] = useState('');
   const [showNotif, setShowNotif] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const searchResults = useCampusSearch(searchTerm);
   const initials = (profile?.nombre || user?.email || 'U').slice(0, 2).toUpperCase();
   const unreadCount = actividad.length;
@@ -646,66 +725,102 @@ const DashboardShell: React.FC<{
   ];
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-60 border-r border-sidebar-border bg-sidebar flex flex-col">
-        <div className="p-6 border-b border-sidebar-border">
-          <div className="flex items-center gap-2">
-            <CampusSocialLogo size="md" />
-          </div>
-        </div>
-        
-        <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-          {menuItems.map(item => (
-            <button
-              key={item.id}
-              onClick={() => onNavigate(item.id)}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-                ${activeScreen === item.id 
-                  ? 'bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white shadow-lg shadow-purple-500/30' 
-                  : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                }`}
+    <div className="flex h-screen bg-background overflow-hidden relative">
+      {/* Drawer Menu */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
+              onClick={() => setIsMenuOpen(false)}
+            />
+            <motion.aside 
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="fixed top-0 left-0 bottom-0 w-72 bg-card/95 backdrop-blur-md z-50 flex flex-col shadow-2xl border-r border-border"
             >
-              {item.icon}
-              {item.label}
-            </button>
-          ))}
-        </nav>
-
-        <div className="p-4 border-t border-sidebar-border space-y-2">
-          <div className="flex items-center gap-3 px-4 py-3 bg-sidebar-accent rounded-xl">
-            <div className="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-              {initials}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium truncate">{profile?.nombre || 'Usuario'}</div>
-              <div className="text-xs text-muted-foreground truncate">{profile?.email || user?.email}</div>
-            </div>
-          </div>
-          <button
-            onClick={onLogout}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-all duration-200 group"
-          >
-            <LogOut className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-200" />
-            Cerrar sesión
-          </button>
-        </div>
-      </aside>
+              <div className="p-4 flex items-center justify-between border-b border-border">
+                 <CampusSocialLogo size="md" />
+                 <button onClick={() => setIsMenuOpen(false)} className="p-2 hover:bg-accent rounded-xl text-muted-foreground transition-all cursor-pointer hover:rotate-90 duration-200">
+                   <X className="w-5 h-5" />
+                 </button>
+              </div>
+              <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+                {menuItems.map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => { onNavigate(item.id); setIsMenuOpen(false); }}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium transition-all duration-200 cursor-pointer hover:translate-x-1
+                      ${activeScreen === item.id 
+                        ? 'liquid-button' 
+                        : 'text-foreground hover:bg-accent'
+                      }`}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </button>
+                ))}
+              </nav>
+              <div className="p-4 border-t border-border space-y-2">
+                <div className="flex items-center gap-3 px-4 py-3 bg-accent/50 rounded-2xl">
+                  <div className="w-10 h-10 bg-gradient-to-br from-[#1e3a8a] to-[#06b6d4] rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-md">
+                    {initials}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{profile?.nombre || 'Usuario'}</div>
+                    <div className="text-xs text-muted-foreground truncate">{profile?.email || user?.email}</div>
+                  </div>
+                </div>
+                <button
+                  onClick={onLogout}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-medium text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-all duration-200 group cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4 group-hover:translate-x-0.5 transition-transform duration-200" />
+                  Cerrar sesión
+                </button>
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden relative">
         {/* Topbar */}
-        <header className="h-16 border-b border-border bg-card/80 backdrop-blur-sm flex items-center justify-between px-6 gap-3">
-          <div className="flex-1 max-w-md relative">
-            <Input
-              placeholder="Buscar publicaciones, borradores..."
-              icon={<Search />}
-              className="bg-accent/50"
+        <header className="h-16 liquid-glass-header flex items-center justify-between px-4 sm:px-6 gap-3 z-30 shrink-0">
+          <div className="flex items-center gap-3">
+             {/* Hamburger with animation */}
+             <motion.button
+               onClick={() => setIsMenuOpen(true)}
+               className="p-2 hover:bg-slate-100 dark:hover:bg-accent rounded-xl transition-colors text-foreground cursor-pointer"
+               whileHover={{ scale: 1.05 }}
+               whileTap={{ scale: 0.92 }}
+               transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+             >
+               <Menu className="w-6 h-6" />
+             </motion.button>
+             <div className="hidden sm:block">
+               <CampusSocialLogo size="sm" />
+             </div>
+          </div>
+          
+          <div className="flex-1 max-w-md relative hidden md:block">
+            <SearchBarAnimated
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             {searchTerm.trim() && (
-              <div className="absolute top-full left-0 right-0 mt-1 z-50 bg-card border rounded-xl shadow-lg max-h-64 overflow-y-auto p-2">
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                className="absolute top-full left-0 right-0 mt-1 z-50 bg-card border rounded-2xl shadow-lg max-h-64 overflow-y-auto p-2"
+              >
                 {searchResults.publicaciones.length === 0 && searchResults.borradores.length === 0 && (
                   <p className="text-xs text-muted-foreground p-2">Sin resultados</p>
                 )}
@@ -713,7 +828,7 @@ const DashboardShell: React.FC<{
                   <button
                     key={p.id}
                     type="button"
-                    className="w-full text-left p-2 rounded-lg hover:bg-accent text-sm"
+                    className="w-full text-left p-2 rounded-lg hover:bg-accent text-sm cursor-pointer transition-colors"
                     onClick={() => { onNavigate('calendar'); setSearchTerm(''); }}
                   >
                     <span className="font-medium">{p.titulo}</span>
@@ -724,7 +839,7 @@ const DashboardShell: React.FC<{
                   <button
                     key={b.id}
                     type="button"
-                    className="w-full text-left p-2 rounded-lg hover:bg-accent text-sm"
+                    className="w-full text-left p-2 rounded-lg hover:bg-accent text-sm cursor-pointer transition-colors"
                     onClick={() => {
                       resumeBorradorAndNavigate(b, onNavigate);
                       setSearchTerm('');
@@ -733,77 +848,142 @@ const DashboardShell: React.FC<{
                     <span className="font-medium">{b.titulo || 'Borrador'}</span>
                   </button>
                 ))}
-              </div>
+              </motion.div>
             )}
           </div>
           <div className="flex items-center gap-2">
-            <button
+            {/* Theme toggle with animation */}
+            <motion.button
               type="button"
               title={mode === 'dark' ? 'Modo claro' : 'Modo oscuro'}
               onClick={toggleTheme}
-              className="p-2 hover:bg-accent rounded-xl transition-colors"
+              className="p-2 hover:bg-slate-100 dark:hover:bg-accent rounded-xl transition-colors text-foreground cursor-pointer"
+              whileHover={{ scale: 1.15 }}
+              whileTap={{ scale: 0.85, rotate: 180 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 17 }}
             >
-              {mode === 'dark' ? (
-                <Sun className="w-5 h-5 text-muted-foreground" />
-              ) : (
-                <Moon className="w-5 h-5 text-muted-foreground" />
-              )}
-            </button>
+              <AnimatePresence mode="wait">
+                {mode === 'dark' ? (
+                  <motion.div
+                    key="sun"
+                    initial={{ rotate: -90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: 90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Sun className="w-5 h-5 text-amber-400" />
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="moon"
+                    initial={{ rotate: 90, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: -90, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Moon className="w-5 h-5 text-slate-500 dark:text-slate-400" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.button>
+
+            {/* Notifications with animated dot */}
             <div className="relative">
-              <button
+              <motion.button
                 type="button"
-                className="relative p-2 hover:bg-accent rounded-xl transition-colors"
+                className="relative p-2 hover:bg-slate-100 dark:hover:bg-accent rounded-xl transition-colors text-foreground cursor-pointer"
                 onClick={() => setShowNotif((v) => !v)}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 17 }}
               >
                 <Bell className="w-5 h-5 text-muted-foreground" />
                 {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 min-w-[8px] h-2 px-0.5 bg-red-500 rounded-full text-[10px] text-white flex items-center justify-center">
-                    {unreadCount > 9 ? '9+' : unreadCount}
-                  </span>
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full ring-2 ring-white/80"
+                  >
+                    <span className="absolute inset-0 rounded-full bg-red-400 animate-ping opacity-75" />
+                  </motion.span>
                 )}
-              </button>
-              {showNotif && (
-                <div className="absolute right-0 top-full mt-1 w-80 z-50 bg-card border rounded-xl shadow-lg max-h-80 overflow-y-auto">
-                  <p className="px-3 py-2 text-xs font-semibold border-b">Actividad reciente</p>
-                  {actividad.length === 0 && (
-                    <p className="p-3 text-xs text-muted-foreground">Sin notificaciones</p>
-                  )}
-                  {actividad.slice(0, 8).map((a) => (
-                    <div key={a.id} className="px-3 py-2 border-b last:border-0 text-sm">
-                      <p className="font-medium">{a.mensaje}</p>
-                      <p className="text-xs text-muted-foreground">{formatRelative(toDate(a.creadoEn))}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
+              </motion.button>
+              <AnimatePresence>
+                {showNotif && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                    transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                    className="absolute right-0 top-full mt-1 w-80 z-50 bg-card border rounded-2xl shadow-xl max-h-80 overflow-y-auto"
+                  >
+                    <p className="px-3 py-2 text-xs font-semibold border-b">Actividad reciente</p>
+                    {actividad.length === 0 && (
+                      <p className="p-3 text-xs text-muted-foreground">Sin notificaciones</p>
+                    )}
+                    {actividad.slice(0, 8).map((a) => (
+                      <div key={a.id} className="px-3 py-2 border-b last:border-0 text-sm">
+                        <p className="font-medium">{a.mensaje}</p>
+                        <p className="text-xs text-muted-foreground">{formatRelative(toDate(a.creadoEn))}</p>
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-            <button
+
+            {/* Profile avatar with ring animation */}
+            <motion.button
               type="button"
               onClick={() => setShowProfile((v) => !v)}
-              className="w-9 h-9 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full flex items-center justify-center text-white font-semibold text-sm"
+              className="relative w-10 h-10 rounded-full cursor-pointer group"
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 20 }}
             >
-              {initials}
-            </button>
+              <div className="absolute inset-0 rounded-full border-2 border-transparent group-hover:border-[#06b6d4]/50 transition-all duration-300 group-hover:scale-110" />
+              <div className="w-full h-full bg-gradient-to-br from-[#1e3a8a] to-[#06b6d4] rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-md">
+                {initials}
+              </div>
+            </motion.button>
           </div>
         </header>
-        {showProfile && (
-          <div className="fixed inset-0 z-50 flex items-start justify-end p-4 pt-20" onClick={() => setShowProfile(false)}>
-            <div className="bg-card border rounded-2xl shadow-xl p-6 w-72" onClick={(e) => e.stopPropagation()}>
-              <div className="flex flex-col items-center text-center gap-3">
-                <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-500 rounded-full flex items-center justify-center text-white text-xl font-bold">
-                  {initials}
+
+        {/* Profile popup with entry/exit animations */}
+        <AnimatePresence>
+          {showProfile && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 z-50 flex items-start justify-end p-4 pt-20"
+              onClick={() => setShowProfile(false)}
+            >
+              <motion.div
+                initial={{ opacity: 0, y: -12, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -12, scale: 0.9 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                className="bg-card border rounded-2xl shadow-xl p-6 w-72"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex flex-col items-center text-center gap-3">
+                  <div className="w-16 h-16 bg-gradient-to-br from-[#1e3a8a] to-[#06b6d4] rounded-full flex items-center justify-center text-white text-xl font-bold shadow-lg">
+                    {initials}
+                  </div>
+                  <div>
+                    <p className="font-semibold">{profile?.nombre || 'Usuario'}</p>
+                    <p className="text-sm text-muted-foreground">{profile?.email || user?.email}</p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => { setShowProfile(false); onNavigate('settings'); }}>
+                    Ajustes
+                  </Button>
                 </div>
-                <div>
-                  <p className="font-semibold">{profile?.nombre || 'Usuario'}</p>
-                  <p className="text-sm text-muted-foreground">{profile?.email || user?.email}</p>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => { setShowProfile(false); onNavigate('settings'); }}>
-                  Ajustes
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Content Area */}
         <main className="flex-1 overflow-y-auto">
@@ -1206,50 +1386,93 @@ const NewPostScreen: React.FC = () => {
   const displayName = profile?.nombre || 'Campus Lands';
 
   return (
-    <div className="h-full bg-accent/20">
-      <Toast message="¡Publicación programada exitosamente!" type="success" show={showToast} />
+    <div className="h-full">
+      <Toast message={toastMsg || '¡Publicación programada!'} type="success" show={showToast} />
       
-      <div className="max-w-[1400px] mx-auto p-6 h-full">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-2">Nueva publicación</h1>
-          <p className="text-muted-foreground">Crea contenido atractivo con ayuda de IA</p>
-          {errorMsg && (
-            <p className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2">
-              {errorMsg}
-            </p>
-          )}
-          {makeWarning && (
-            <p className="mt-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2">
-              {makeWarning} Puedes vaciar la URL de Make en Ajustes si no lo usas.
-            </p>
-          )}
-        </div>
+      <div className="max-w-[1400px] mx-auto p-4 sm:p-6 lg:p-8 h-full">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="mb-6"
+        >
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#0B1F4B] to-[#2BBDE8] dark:from-[#60a5fa] dark:to-[#22d3ee] bg-clip-text text-transparent">Nueva publicación</h1>
+          <p className="text-sm text-muted-foreground mt-1">Crea contenido atractivo con ayuda de IA</p>
+          <AnimatePresence>
+            {errorMsg && (
+              <motion.p
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                className="mt-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-2xl px-4 py-2.5"
+              >
+                {errorMsg}
+              </motion.p>
+            )}
+            {makeWarning && (
+              <motion.p
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                className="mt-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-2.5"
+              >
+                {makeWarning} Puedes vaciar la URL de Make en Ajustes si no lo usas.
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </motion.div>
 
         <div className="grid lg:grid-cols-2 gap-6 h-[calc(100%-8rem)]">
           {/* Left Panel - Form */}
-          <Card className="overflow-y-auto">
-            <div className="space-y-6">
-              <Textarea
-                label="Tema del post"
-                placeholder="Ej: Lanzamiento nuevo bootcamp de desarrollo web en Bucaramanga"
-                rows={4}
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-              />
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            className="bg-white/60 dark:bg-card backdrop-blur-xl border border-white/40 dark:border-border rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-y-auto"
+          >
+            <div className="space-y-5">
+              {/* Topic */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <PenSquare className="w-4 h-4 text-[#06b6d4]" />
+                  Tema del post
+                </label>
+                <textarea
+                  placeholder="Ej: Lanzamiento nuevo bootcamp de desarrollo web en Bucaramanga"
+                  rows={3}
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/50 dark:bg-input-background border border-white/40 dark:border-input rounded-2xl text-sm transition-all duration-300 resize-none
+                    focus:outline-none focus:ring-2 focus:ring-[#06b6d4]/30 focus:border-[#06b6d4]/40 focus:bg-white dark:focus:bg-input-background focus:shadow-lg focus:shadow-[#06b6d4]/5
+                    hover:bg-white/70 dark:hover:bg-input-background/80"
+                />
+              </div>
 
-              <Select
-                label="Tono de voz"
-                options={[
-                  { value: 'profesional', label: 'Profesional' },
-                  { value: 'educativo', label: 'Educativo' },
-                  { value: 'promocional', label: 'Promocional' }
-                ]}
-                value={tone}
-                onChange={(e) => setTone(e.target.value)}
-              />
+              {/* Tone */}
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-[#06b6d4]" />
+                  Tono de voz
+                </label>
+                <select
+                  value={tone}
+                  onChange={(e) => setTone(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/50 dark:bg-input-background border border-white/40 dark:border-input rounded-2xl text-sm transition-all duration-300 appearance-none cursor-pointer
+                    focus:outline-none focus:ring-2 focus:ring-[#06b6d4]/30 focus:border-[#06b6d4]/40 focus:bg-white dark:focus:bg-input-background
+                    hover:bg-white/70 dark:hover:bg-input-background/80"
+                >
+                  <option value="profesional">Profesional</option>
+                  <option value="educativo">Educativo</option>
+                  <option value="promocional">Promocional</option>
+                </select>
+              </div>
 
-              <div className="flex items-center gap-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 p-4 rounded-xl">
-                <Linkedin className="w-6 h-6 text-[#0a66c2] shrink-0" />
+              {/* LinkedIn badge */}
+              <div className="flex items-center gap-3 bg-gradient-to-r from-[#1e3a8a]/5 to-[#06b6d4]/5 border border-[#06b6d4]/15 p-4 rounded-2xl">
+                <div className="w-10 h-10 bg-[#0a66c2]/10 rounded-xl flex items-center justify-center">
+                  <Linkedin className="w-5 h-5 text-[#0a66c2]" />
+                </div>
                 <div>
                   <p className="text-sm font-medium">Canal de publicación</p>
                   <p className="text-xs text-muted-foreground">
@@ -1258,7 +1481,8 @@ const NewPostScreen: React.FC = () => {
                 </div>
               </div>
 
-              <div className="space-y-3 bg-accent/50 p-4 rounded-xl">
+              {/* Image toggle */}
+              <div className="space-y-3 bg-white/40 dark:bg-accent/30 backdrop-blur-sm p-4 rounded-2xl border border-white/30 dark:border-border">
                 <Toggle
                   label="Generar imagen con IA"
                   checked={generateImage}
@@ -1267,87 +1491,100 @@ const NewPostScreen: React.FC = () => {
                     if (v) setManualUploads([]);
                   }}
                 />
-                {!generateImage && (
-                  <div className="space-y-3 pt-2 border-t border-border">
-                    <p className="text-sm font-medium">Subir foto o archivo</p>
-                    <div
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        setIsDraggingMedia(true);
-                      }}
-                      onDragLeave={() => setIsDraggingMedia(false)}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        setIsDraggingMedia(false);
-                        if (e.dataTransfer.files?.length) {
-                          addManualFiles(Array.from(e.dataTransfer.files));
-                        }
-                      }}
-                      onClick={() => newPostFileRef.current?.click()}
-                      className={`border-2 border-dashed rounded-xl p-6 flex flex-col items-center gap-2 cursor-pointer transition-all
-                        ${isDraggingMedia ? 'border-[#667eea] bg-purple-50 dark:bg-purple-950/30' : 'border-border hover:border-[#667eea]/50'}`}
+                <AnimatePresence>
+                  {!generateImage && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="space-y-3 pt-2 border-t border-border/50 overflow-hidden"
                     >
-                      <FileUp className="w-6 h-6 text-muted-foreground" />
-                      <p className="text-xs text-center text-muted-foreground">
-                        Arrastra imágenes o haz clic (PNG, JPG, GIF, MP4)
-                      </p>
-                      <input
-                        ref={newPostFileRef}
-                        type="file"
-                        accept="image/*,video/*"
-                        multiple
-                        className="hidden"
-                        onChange={(e) =>
-                          e.target.files && addManualFiles(Array.from(e.target.files))
-                        }
-                      />
-                    </div>
-                    {manualUploads.length > 0 && (
-                      <div className="grid grid-cols-3 gap-2">
-                        {manualUploads.map((f, i) => (
-                          <div
-                            key={i}
-                            className="relative aspect-square rounded-lg overflow-hidden bg-accent"
-                          >
-                            {f.preview ? (
-                              <img
-                                src={f.preview}
-                                alt={f.name}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center">
-                                <Video className="w-6 h-6 text-muted-foreground" />
-                              </div>
-                            )}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeManualFile(i);
-                              }}
-                              className="absolute top-1 right-1 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center"
-                            >
-                              <X className="w-3 h-3 text-white" />
-                            </button>
-                          </div>
-                        ))}
+                      <p className="text-sm font-medium">Subir foto o archivo</p>
+                      <div
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDraggingMedia(true);
+                        }}
+                        onDragLeave={() => setIsDraggingMedia(false)}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          setIsDraggingMedia(false);
+                          if (e.dataTransfer.files?.length) {
+                            addManualFiles(Array.from(e.dataTransfer.files));
+                          }
+                        }}
+                        onClick={() => newPostFileRef.current?.click()}
+                        className={`border-2 border-dashed rounded-2xl p-6 flex flex-col items-center gap-2 cursor-pointer transition-all duration-300
+                          ${isDraggingMedia ? 'border-[#06b6d4] bg-[#06b6d4]/5 scale-[1.02]' : 'border-border/50 hover:border-[#06b6d4]/40 hover:bg-[#06b6d4]/5'}`}
+                      >
+                        <FileUp className="w-6 h-6 text-muted-foreground" />
+                        <p className="text-xs text-center text-muted-foreground">
+                          Arrastra imágenes o haz clic (PNG, JPG, GIF, MP4)
+                        </p>
+                        <input
+                          ref={newPostFileRef}
+                          type="file"
+                          accept="image/*,video/*"
+                          multiple
+                          className="hidden"
+                          onChange={(e) =>
+                            e.target.files && addManualFiles(Array.from(e.target.files))
+                          }
+                        />
                       </div>
-                    )}
-                  </div>
-                )}
+                      {manualUploads.length > 0 && (
+                        <div className="grid grid-cols-3 gap-2">
+                          {manualUploads.map((f, i) => (
+                            <motion.div
+                              key={i}
+                              initial={{ opacity: 0, scale: 0.8 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="relative aspect-square rounded-xl overflow-hidden bg-accent"
+                            >
+                              {f.preview ? (
+                                <img
+                                  src={f.preview}
+                                  alt={f.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Video className="w-6 h-6 text-muted-foreground" />
+                                </div>
+                              )}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  removeManualFile(i);
+                                }}
+                                className="absolute top-1 right-1 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center cursor-pointer hover:bg-black/80 transition-colors"
+                              >
+                                <X className="w-3 h-3 text-white" />
+                              </button>
+                            </motion.div>
+                          ))}
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
-              <div className="flex gap-3 pt-4">
-                <Button 
-                  variant="primary" 
-                  className="flex-1"
-                  icon={isGenerating ? <Loader2 className="animate-spin" /> : <Sparkles />}
-                  onClick={handleGenerate}
-                  disabled={!topic || isGenerating}
-                >
-                  {isGenerating ? 'Generando...' : 'Generar borrador'}
-                </Button>
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <motion.div className="flex-1" whileTap={{ scale: 0.98 }}>
+                  <Button 
+                    variant="liquid" 
+                    className="w-full"
+                    icon={isGenerating ? <Loader2 className="animate-spin" /> : <Sparkles />}
+                    onClick={handleGenerate}
+                    disabled={!topic || isGenerating}
+                  >
+                    {isGenerating ? 'Generando...' : 'Generar con IA'}
+                  </Button>
+                </motion.div>
                 <Button variant="ghost" onClick={() => {
                   setTopic('');
                   setGeneratedText('');
@@ -1360,33 +1597,52 @@ const NewPostScreen: React.FC = () => {
                 </Button>
               </div>
             </div>
-          </Card>
+          </motion.div>
 
           {/* Right Panel - Preview */}
-          <Card>
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+            className="bg-white/60 dark:bg-card backdrop-blur-xl border border-white/40 dark:border-border rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+          >
             <div className="space-y-4 h-full flex flex-col">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Vista previa</h3>
-                <Badge variant="purple">LinkedIn</Badge>
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-[#06b6d4]" />
+                  Vista previa
+                </h3>
+                <span className="inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-medium bg-[#0a66c2]/10 text-[#0a66c2]">
+                  LinkedIn
+                </span>
               </div>
 
-              {/* Vista previa LinkedIn */}
+              {/* Preview content */}
               <div className="flex-1 overflow-y-auto">
                 {!showPreview && (
                   <div className="h-full flex items-center justify-center text-center p-8">
-                    <div className="space-y-3">
-                      <div className="w-16 h-16 bg-accent rounded-full flex items-center justify-center mx-auto">
-                        <Eye className="w-8 h-8 text-muted-foreground" />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.5 }}
+                      className="space-y-4"
+                    >
+                      <div className="w-20 h-20 bg-gradient-to-br from-[#1e3a8a]/10 to-[#06b6d4]/10 rounded-3xl flex items-center justify-center mx-auto">
+                        <Eye className="w-10 h-10 text-[#06b6d4]/60" />
                       </div>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-muted-foreground max-w-[200px]">
                         Escribe un tema y genera contenido para ver la vista previa
                       </p>
-                    </div>
+                    </motion.div>
                   </div>
                 )}
 
                 {isGenerating && (
-                  <div className="space-y-4">
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="space-y-4"
+                  >
                     <div className="flex items-center gap-3">
                       <Skeleton className="w-12 h-12 rounded-full" />
                       <div className="flex-1 space-y-2">
@@ -1399,12 +1655,17 @@ const NewPostScreen: React.FC = () => {
                       <Skeleton className="h-4 w-full" />
                       <Skeleton className="h-4 w-3/4" />
                     </div>
-                    <Skeleton className="h-48 w-full rounded-xl" />
-                  </div>
+                    <Skeleton className="h-48 w-full rounded-2xl" />
+                  </motion.div>
                 )}
 
                 {showPreview && (
-                  <div className="space-y-4">
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4 }}
+                    className="space-y-4"
+                  >
                     <SocialPostPreview
                       network={RED_PRINCIPAL}
                       authorName={displayName}
@@ -1414,63 +1675,80 @@ const NewPostScreen: React.FC = () => {
                       charLimit={3000}
                     />
                     {generateImage && imagenNota && (
-                      <p className="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl px-3 py-2">
+                      <p className="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl px-3 py-2">
                         {imagenNota}
                       </p>
                     )}
-                  </div>
+                  </motion.div>
                 )}
               </div>
             </div>
-          </Card>
+          </motion.div>
         </div>
 
         {/* Sticky Bottom Bar */}
-        {hasContent && (
-          <div className="fixed bottom-0 left-60 right-0 bg-card/95 backdrop-blur-sm border-t border-border p-4">
-            <div className="max-w-[1400px] mx-auto flex flex-wrap items-center justify-between gap-4">
-              <div className="flex flex-wrap items-center gap-3">
-                <select
-                  value={scheduleMode}
-                  onChange={(e) => setScheduleMode(e.target.value as 'now' | 'schedule')}
-                  className="px-3 py-2 border rounded-xl text-sm"
-                >
-                  <option value="now">Publicar ahora</option>
-                  <option value="schedule">Programar</option>
-                </select>
-                {scheduleMode === 'schedule' && (
-                  <>
-                    <Input type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} className="w-40" />
-                    <Input type="time" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} className="w-32" />
-                    <select value={timezone} onChange={(e) => setTimezone(e.target.value)} className="px-3 py-2 border rounded-xl text-sm">
-                      <option value="America/Bogota">Colombia</option>
-                      <option value="America/Mexico_City">México</option>
-                      <option value="UTC">UTC</option>
+        <AnimatePresence>
+          {hasContent && (
+            <motion.div
+              initial={{ y: 80, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 80, opacity: 0 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+              className="fixed bottom-0 left-0 right-0 z-30"
+            >
+              <div className="liquid-glass-header border-t border-white/30 p-4">
+                <div className="max-w-[1400px] mx-auto flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <select
+                      value={scheduleMode}
+                      onChange={(e) => setScheduleMode(e.target.value as 'now' | 'schedule')}
+                      className="px-3 py-2.5 bg-white/50 dark:bg-input-background border border-white/40 dark:border-input rounded-2xl text-sm cursor-pointer transition-all hover:bg-white/70 dark:hover:bg-input-background/80 focus:ring-2 focus:ring-[#06b6d4]/30 focus:outline-none"
+                    >
+                      <option value="now">Publicar ahora</option>
+                      <option value="schedule">Programar</option>
                     </select>
-                    <select value={repeatMode} onChange={(e) => setRepeatMode(e.target.value)} className="px-3 py-2 border rounded-xl text-sm" title="Repetir la misma publicación">
-                      <option value="none">Sin repetir</option>
-                      <option value="daily">Diario</option>
-                      <option value="weekly">Semanal</option>
-                    </select>
-                  </>
-                )}
+                    <AnimatePresence>
+                      {scheduleMode === 'schedule' && (
+                        <motion.div
+                          initial={{ opacity: 0, width: 0 }}
+                          animate={{ opacity: 1, width: 'auto' }}
+                          exit={{ opacity: 0, width: 0 }}
+                          className="flex items-center gap-2 overflow-hidden"
+                        >
+                          <input type="date" value={scheduledDate} onChange={(e) => setScheduledDate(e.target.value)} className="px-3 py-2.5 bg-white/50 dark:bg-input-background border border-white/40 dark:border-input rounded-2xl text-sm w-40 focus:ring-2 focus:ring-[#06b6d4]/30 focus:outline-none" />
+                          <input type="time" value={scheduledTime} onChange={(e) => setScheduledTime(e.target.value)} className="px-3 py-2.5 bg-white/50 dark:bg-input-background border border-white/40 dark:border-input rounded-2xl text-sm w-32 focus:ring-2 focus:ring-[#06b6d4]/30 focus:outline-none" />
+                          <select value={timezone} onChange={(e) => setTimezone(e.target.value)} className="px-3 py-2.5 bg-white/50 dark:bg-input-background border border-white/40 dark:border-input rounded-2xl text-sm cursor-pointer focus:ring-2 focus:ring-[#06b6d4]/30 focus:outline-none">
+                            <option value="America/Bogota">Colombia</option>
+                            <option value="America/Mexico_City">México</option>
+                            <option value="UTC">UTC</option>
+                          </select>
+                          <select value={repeatMode} onChange={(e) => setRepeatMode(e.target.value)} className="px-3 py-2.5 bg-white/50 dark:bg-input-background border border-white/40 dark:border-input rounded-2xl text-sm cursor-pointer focus:ring-2 focus:ring-[#06b6d4]/30 focus:outline-none" title="Repetir la misma publicación">
+                            <option value="none">Sin repetir</option>
+                            <option value="daily">Diario</option>
+                            <option value="weekly">Semanal</option>
+                          </select>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Button variant="outline" icon={<Save />} onClick={handleSaveBorrador}>
+                      Guardar borrador
+                    </Button>
+                    <Button
+                      variant="liquid"
+                      icon={scheduleMode === 'now' ? <Send /> : <Calendar />}
+                      onClick={handleSchedule}
+                      disabled={scheduleMode === 'schedule' && (!scheduledDate || !scheduledTime)}
+                    >
+                      {scheduleMode === 'now' ? 'Publicar ahora' : 'Programar'}
+                    </Button>
+                  </div>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Button variant="outline" icon={<Save />} onClick={handleSaveBorrador}>
-                  Guardar borrador
-                </Button>
-                <Button
-                  variant="success"
-                  icon={scheduleMode === 'now' ? <Send /> : <Calendar />}
-                  onClick={handleSchedule}
-                  disabled={scheduleMode === 'schedule' && (!scheduledDate || !scheduledTime)}
-                >
-                  {scheduleMode === 'now' ? 'Publicar ahora' : 'Programar'}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -1618,32 +1896,45 @@ const ManualPostScreen: React.FC = () => {
   const today = new Date().toISOString().split('T')[0];
 
   return (
-    <div className="h-full bg-accent/20 overflow-y-auto">
+    <div className="h-full overflow-y-auto">
       <Toast message={toastMsg} type="success" show={showToast} />
 
-      <div className="max-w-[1400px] mx-auto p-6">
+      <div className="max-w-[1400px] mx-auto p-4 sm:p-6 lg:p-8">
         {/* Header */}
-        <div className="mb-6 flex items-start justify-between">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="mb-6 flex flex-col sm:flex-row sm:items-start justify-between gap-4"
+        >
           <div>
-            <h1 className="text-2xl font-bold mb-1">Subir publicación</h1>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#0B1F4B] to-[#2BBDE8] dark:from-[#60a5fa] dark:to-[#22d3ee] bg-clip-text text-transparent mb-1">Subir publicación</h1>
             <p className="text-muted-foreground text-sm">Crea y programa contenido manualmente sin IA</p>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+          <div className="flex items-center gap-2 text-xs text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl px-4 py-2.5">
             <Info className="w-4 h-4 text-amber-500 shrink-0" />
             <span>Las publicaciones programadas se envían via <strong>n8n + Postiz</strong></span>
           </div>
-        </div>
+        </motion.div>
 
         <div className="grid lg:grid-cols-[1fr_380px] gap-6">
           {/* LEFT COLUMN */}
-          <div className="space-y-5">
+          <div className="space-y-6">
 
             {/* Content editor */}
-            <Card>
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4, delay: 0.1 }}
+              className="bg-white/60 dark:bg-card backdrop-blur-xl border border-white/40 dark:border-border rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+            >
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-semibold">Contenido del post</h3>
-                  <span className={`text-xs font-medium ${postText.length > 3000 ? 'text-destructive' : 'text-muted-foreground'}`}>
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <PenSquare className="w-4 h-4 text-[#06b6d4]" />
+                    Contenido del post
+                  </h3>
+                  <span className={`text-xs font-medium px-2 py-1 rounded-lg ${postText.length > 3000 ? 'bg-red-100 text-red-600' : 'bg-accent text-muted-foreground'}`}>
                     {postText.length} / 3000
                   </span>
                 </div>
@@ -1652,22 +1943,34 @@ const ManualPostScreen: React.FC = () => {
                   value={postText}
                   onChange={e => setPostText(e.target.value)}
                   rows={8}
-                  className="w-full px-4 py-3 bg-input-background border border-input rounded-xl text-sm resize-none transition-all focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent placeholder:text-muted-foreground leading-relaxed"
+                  className="w-full px-4 py-3 bg-white/50 dark:bg-input-background border border-white/40 dark:border-input rounded-2xl text-sm transition-all duration-300 resize-none
+                    focus:outline-none focus:ring-2 focus:ring-[#06b6d4]/30 focus:border-[#06b6d4]/40 focus:bg-white dark:focus:bg-input-background focus:shadow-lg focus:shadow-[#06b6d4]/5
+                    hover:bg-white/70 dark:hover:bg-input-background/80 leading-relaxed placeholder:text-muted-foreground/70"
                 />
                 <div className="flex items-center gap-2 flex-wrap">
                   {['😊', '🚀', '✅', '💡', '🎯', '🔥', '📌', '💬'].map(e => (
-                    <button key={e} onClick={() => setPostText(p => p + e)}
-                      className="w-8 h-8 text-lg hover:bg-accent rounded-lg transition-colors">{e}</button>
+                    <motion.button key={e} onClick={() => setPostText(p => p + e)} whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}
+                      className="w-9 h-9 text-lg hover:bg-white/60 dark:hover:bg-accent rounded-xl transition-colors cursor-pointer shadow-sm border border-transparent hover:border-border/50 flex items-center justify-center">
+                      {e}
+                    </motion.button>
                   ))}
                   <span className="text-xs text-muted-foreground ml-2">Emojis rápidos</span>
                 </div>
               </div>
-            </Card>
+            </motion.div>
 
             {/* Media Upload */}
-            <Card>
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4, delay: 0.15 }}
+              className="bg-white/60 dark:bg-card backdrop-blur-xl border border-white/40 dark:border-border rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+            >
               <div className="space-y-4">
-                <h3 className="font-semibold">Medios adjuntos</h3>
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Image className="w-4 h-4 text-[#06b6d4]" />
+                  Medios adjuntos
+                </h3>
 
                 {/* Drop zone */}
                 <div
@@ -1675,22 +1978,22 @@ const ManualPostScreen: React.FC = () => {
                   onDragLeave={() => setIsDragging(false)}
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all duration-200
-                    ${isDragging ? 'border-[#667eea] bg-purple-50' : 'border-border hover:border-[#667eea]/50 hover:bg-accent/50'}`}
+                  className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all duration-300
+                    ${isDragging ? 'border-[#06b6d4] bg-[#06b6d4]/5 scale-[1.02]' : 'border-border/50 hover:border-[#06b6d4]/40 hover:bg-[#06b6d4]/5'}`}
                 >
-                  <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${isDragging ? 'bg-gradient-to-br from-[#667eea] to-[#764ba2]' : 'bg-accent'}`}>
+                  <div className={`w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300 ${isDragging ? 'bg-gradient-to-br from-[#1e3a8a] to-[#06b6d4] shadow-lg shadow-[#06b6d4]/20' : 'bg-accent'}`}>
                     <FileUp className={`w-6 h-6 ${isDragging ? 'text-white' : 'text-muted-foreground'}`} />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm font-medium">Arrastra archivos aquí o <span className="text-[#667eea]">haz clic para seleccionar</span></p>
+                    <p className="text-sm font-medium">Arrastra archivos aquí o <span className="text-[#06b6d4]">haz clic para seleccionar</span></p>
                     <p className="text-xs text-muted-foreground mt-1">PNG, JPG, GIF, MP4 — máx. 10 MB por archivo</p>
                   </div>
                   <div className="flex gap-3 mt-1">
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-accent px-3 py-1.5 rounded-lg">
-                      <Image className="w-3.5 h-3.5" />Imagen
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-white/50 dark:bg-accent border border-white/40 dark:border-border px-3 py-1.5 rounded-xl shadow-sm">
+                      <Image className="w-3.5 h-3.5 text-[#06b6d4]" />Imagen
                     </div>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-accent px-3 py-1.5 rounded-lg">
-                      <Video className="w-3.5 h-3.5" />Video
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-white/50 dark:bg-accent border border-white/40 dark:border-border px-3 py-1.5 rounded-xl shadow-sm">
+                      <Video className="w-3.5 h-3.5 text-[#06b6d4]" />Video
                     </div>
                   </div>
                   <input ref={fileInputRef} type="file" multiple accept="image/*,video/*" className="hidden"
@@ -1700,149 +2003,181 @@ const ManualPostScreen: React.FC = () => {
                 {/* Uploaded files */}
                 {uploadedFiles.length > 0 && (
                   <div className="grid grid-cols-3 gap-3">
-                    {uploadedFiles.map((f, i) => (
-                      <div key={i} className="relative group rounded-xl overflow-hidden bg-accent aspect-square">
-                        {f.preview ? (
-                          <img src={f.preview} alt={f.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-                            <Video className="w-8 h-8 text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground truncate px-2 text-center">{f.name}</span>
+                    <AnimatePresence>
+                      {uploadedFiles.map((f, i) => (
+                        <motion.div key={i} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
+                          className="relative group rounded-2xl overflow-hidden bg-accent aspect-square shadow-sm border border-border/50">
+                          {f.preview ? (
+                            <img src={f.preview} alt={f.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center gap-2">
+                              <Video className="w-8 h-8 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground truncate px-2 text-center">{f.name}</span>
+                            </div>
+                          )}
+                          <button onClick={() => removeFile(i)}
+                            className="absolute top-2 right-2 w-7 h-7 bg-black/60 backdrop-blur-sm rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-red-500/80 hover:scale-110 cursor-pointer">
+                            <X className="w-3.5 h-3.5 text-white" />
+                          </button>
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm text-white text-xs p-2 truncate opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            {f.name}
                           </div>
-                        )}
-                        <button onClick={() => removeFile(i)}
-                          className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <X className="w-3.5 h-3.5 text-white" />
-                        </button>
-                        <div className="absolute bottom-0 left-0 right-0 bg-black/40 text-white text-xs p-1.5 truncate opacity-0 group-hover:opacity-100 transition-opacity">
-                          {f.name}
-                        </div>
-                      </div>
-                    ))}
-                    <button onClick={() => fileInputRef.current?.click()}
-                      className="aspect-square border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-2 hover:border-[#667eea]/50 hover:bg-accent/50 transition-all cursor-pointer">
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                    <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} onClick={() => fileInputRef.current?.click()}
+                      className="aspect-square border-2 border-dashed border-border/50 rounded-2xl flex flex-col items-center justify-center gap-2 hover:border-[#06b6d4]/40 hover:bg-[#06b6d4]/5 transition-all cursor-pointer">
                       <Plus className="w-6 h-6 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">Añadir</span>
-                    </button>
+                      <span className="text-xs text-muted-foreground">Añadir más</span>
+                    </motion.button>
                   </div>
                 )}
               </div>
-            </Card>
-
-            <Card>
-              <div className="flex items-center gap-3">
-                <Linkedin className="w-6 h-6 text-[#0a66c2] shrink-0" />
-                <div>
-                  <h3 className="font-semibold">Destino</h3>
-                  <p className="text-xs text-muted-foreground">Publicación en LinkedIn (Postiz + n8n)</p>
-                </div>
-              </div>
-            </Card>
+            </motion.div>
           </div>
 
-          {/* RIGHT COLUMN — Scheduling */}
-          <div className="space-y-5">
+          {/* RIGHT COLUMN — Scheduling & Actions */}
+          <div className="space-y-6">
+
+            {/* LinkedIn Destination */}
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4, delay: 0.2 }}
+              className="bg-white/60 dark:bg-card backdrop-blur-xl border border-white/40 dark:border-border rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+            >
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-[#0a66c2]/10 rounded-2xl flex items-center justify-center shrink-0">
+                  <Linkedin className="w-6 h-6 text-[#0a66c2]" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Destino</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">Publicación en LinkedIn (Postiz + n8n)</p>
+                </div>
+              </div>
+            </motion.div>
 
             {/* Scheduling card */}
-            <Card>
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4, delay: 0.25 }}
+              className="bg-white/60 dark:bg-card backdrop-blur-xl border border-white/40 dark:border-border rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+            >
               <div className="space-y-5">
                 <div className="flex items-center gap-2">
-                  <CalendarClock className="w-5 h-5 text-[#667eea]" />
+                  <CalendarClock className="w-5 h-5 text-[#06b6d4]" />
                   <h3 className="font-semibold">Programación</h3>
                 </div>
 
                 {/* Mode toggle */}
-                <div className="grid grid-cols-2 gap-2 p-1 bg-accent rounded-xl">
+                <div className="grid grid-cols-2 gap-2 p-1.5 bg-white/50 dark:bg-accent/50 border border-white/40 dark:border-border rounded-2xl backdrop-blur-sm">
                   {([['now', 'Publicar ahora'], ['schedule', 'Programar']] as const).map(([mode, label]) => (
                     <button key={mode} onClick={() => setScheduleMode(mode)}
-                      className={`py-2 rounded-lg text-sm font-medium transition-all
+                      className={`py-2 rounded-xl text-sm font-medium transition-all duration-300 cursor-pointer
                         ${scheduleMode === mode
-                          ? 'bg-white shadow-sm text-foreground'
-                          : 'text-muted-foreground hover:text-foreground'}`}>
+                          ? 'bg-white shadow-md text-foreground'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-white/40'}`}>
                       {label}
                     </button>
                   ))}
                 </div>
 
-                {scheduleMode === 'now' && (
-                  <div className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
-                    <div className="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center shrink-0">
-                      <Send className="w-4 h-4 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-emerald-800">Publicación inmediata</p>
-                      <p className="text-xs text-emerald-600 mt-0.5">Se enviará a LinkedIn ahora mismo</p>
-                    </div>
-                  </div>
-                )}
+                <AnimatePresence mode="wait">
+                  {scheduleMode === 'now' && (
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                      className="overflow-hidden">
+                      <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl">
+                        <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center shrink-0 shadow-sm">
+                          <Send className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-400">Publicación inmediata</p>
+                          <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-0.5">Se enviará a LinkedIn ahora mismo</p>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
 
-                {scheduleMode === 'schedule' && (
-                  <div className="space-y-4">
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-foreground">Fecha</label>
-                      <input type="date" min={today} value={scheduledDate} onChange={e => setScheduledDate(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-input-background border border-input rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-foreground">Hora</label>
-                      <input type="time" value={scheduledTime} onChange={e => setScheduledTime(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-input-background border border-input rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ring" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                        <Globe className="w-4 h-4 text-muted-foreground" />Zona horaria
-                      </label>
-                      <select value={timezone} onChange={e => setTimezone(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-input-background border border-input rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                        <option value="America/Bogota">Colombia (UTC-5)</option>
-                        <option value="America/Mexico_City">México (UTC-6)</option>
-                        <option value="America/Lima">Perú (UTC-5)</option>
-                        <option value="America/Argentina/Buenos_Aires">Argentina (UTC-3)</option>
-                        <option value="Europe/Madrid">España (UTC+1)</option>
-                        <option value="UTC">UTC</option>
-                      </select>
-                    </div>
+                  {scheduleMode === 'schedule' && (
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                      className="space-y-4 overflow-hidden">
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-foreground">Fecha</label>
+                        <input type="date" min={today} value={scheduledDate} onChange={e => setScheduledDate(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-white/50 dark:bg-input-background border border-white/40 dark:border-input rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#06b6d4]/30 focus:border-[#06b6d4]/40 hover:bg-white/70 transition-all cursor-pointer" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-foreground">Hora</label>
+                        <input type="time" value={scheduledTime} onChange={e => setScheduledTime(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-white/50 dark:bg-input-background border border-white/40 dark:border-input rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#06b6d4]/30 focus:border-[#06b6d4]/40 hover:bg-white/70 transition-all cursor-pointer" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                          <Globe className="w-4 h-4 text-muted-foreground" />Zona horaria
+                        </label>
+                        <select value={timezone} onChange={e => setTimezone(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-white/50 dark:bg-input-background border border-white/40 dark:border-input rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#06b6d4]/30 focus:border-[#06b6d4]/40 hover:bg-white/70 transition-all cursor-pointer">
+                          <option value="America/Bogota">Colombia (UTC-5)</option>
+                          <option value="America/Mexico_City">México (UTC-6)</option>
+                          <option value="America/Lima">Perú (UTC-5)</option>
+                          <option value="America/Argentina/Buenos_Aires">Argentina (UTC-3)</option>
+                          <option value="Europe/Madrid">España (UTC+1)</option>
+                          <option value="UTC">UTC</option>
+                        </select>
+                      </div>
 
-                    {/* Repeat */}
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                        <AlarmClock className="w-4 h-4 text-muted-foreground" />Repetir
-                      </label>
-                      <select value={repeatMode} onChange={e => setRepeatMode(e.target.value)}
-                        className="w-full px-4 py-2.5 bg-input-background border border-input rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ring">
-                        <option value="none">Sin repetición</option>
-                        <option value="daily">Diario</option>
-                        <option value="weekly">Semanal</option>
-                        <option value="biweekly">Cada 2 semanas</option>
-                        <option value="monthly">Mensual</option>
-                      </select>
-                    </div>
+                      {/* Repeat */}
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                          <AlarmClock className="w-4 h-4 text-muted-foreground" />Repetir
+                        </label>
+                        <select value={repeatMode} onChange={e => setRepeatMode(e.target.value)}
+                          className="w-full px-4 py-2.5 bg-white/50 dark:bg-input-background border border-white/40 dark:border-input rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#06b6d4]/30 focus:border-[#06b6d4]/40 hover:bg-white/70 transition-all cursor-pointer">
+                          <option value="none">Sin repetición</option>
+                          <option value="daily">Diario</option>
+                          <option value="weekly">Semanal</option>
+                          <option value="biweekly">Cada 2 semanas</option>
+                          <option value="monthly">Mensual</option>
+                        </select>
+                      </div>
 
-                    {scheduledDate && scheduledTime && (
-                      <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                        className="p-3 bg-purple-50 border border-purple-200 rounded-xl">
-                        <p className="text-xs font-medium text-purple-800 flex items-center gap-1.5">
-                          <CalendarClock className="w-4 h-4" />Programado para
-                        </p>
-                        <p className="text-sm font-semibold text-purple-900 mt-1">
-                          {new Date(`${scheduledDate}T${scheduledTime}`).toLocaleString('es-CO', {
-                            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-                            hour: '2-digit', minute: '2-digit'
-                          })}
-                        </p>
-                        <p className="text-xs text-purple-600 mt-0.5">{timezone.replace('_', ' ')}</p>
-                      </motion.div>
-                    )}
-                  </div>
-                )}
+                      <AnimatePresence>
+                        {scheduledDate && scheduledTime && (
+                          <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                            className="p-4 bg-gradient-to-r from-[#1e3a8a]/5 to-[#06b6d4]/5 border border-[#06b6d4]/20 rounded-2xl">
+                            <p className="text-xs font-medium text-[#1e3a8a] dark:text-[#06b6d4] flex items-center gap-1.5">
+                              <CalendarClock className="w-4 h-4" />Programado para
+                            </p>
+                            <p className="text-sm font-semibold text-foreground mt-1.5">
+                              {new Date(`${scheduledDate}T${scheduledTime}`).toLocaleString('es-CO', {
+                                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+                                hour: '2-digit', minute: '2-digit'
+                              })}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{timezone.replace('_', ' ')}</p>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
-            </Card>
+            </motion.div>
 
             {/* Preview mini */}
-            <Card>
-              <div className="space-y-3">
-                <h3 className="font-semibold text-sm">Vista previa</h3>
-                <div className="max-h-[420px] overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.4, delay: 0.3 }}
+              className="bg-white/60 dark:bg-card backdrop-blur-xl border border-white/40 dark:border-border rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+            >
+              <div className="space-y-4">
+                <h3 className="font-semibold flex items-center gap-2 text-sm">
+                  <Eye className="w-4 h-4 text-[#06b6d4]" />
+                  Vista previa
+                </h3>
+                <div className="max-h-[300px] overflow-y-auto rounded-2xl bg-white/50 dark:bg-black/20 backdrop-blur-sm">
                   <SocialPostPreview
                     network={RED_PRINCIPAL}
                     authorName="Campus Lands"
@@ -1853,17 +2188,22 @@ const ManualPostScreen: React.FC = () => {
                   />
                 </div>
               </div>
-            </Card>
+            </motion.div>
 
             {/* Action buttons */}
-            <div className="space-y-3">
-              <Button variant="primary" className="w-full" size="lg"
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.35 }}
+              className="space-y-3"
+            >
+              <Button variant="liquid" className="w-full" size="lg"
                 icon={saving ? <Loader2 className="animate-spin" /> : scheduleMode === 'now' ? <Send /> : <CalendarClock />}
                 onClick={handleSchedule}
                 disabled={saving || !postText.trim()}>
                 {saving ? 'Guardando…' : scheduleMode === 'now' ? 'Publicar ahora' : 'Programar publicación'}
               </Button>
-              <Button variant="outline" className="w-full" icon={<Save />}
+              <Button variant="outline" className="w-full bg-white/60 dark:bg-card backdrop-blur-xl border-white/40 dark:border-border shadow-sm hover:bg-white/80" icon={<Save />}
                 onClick={async () => {
                   if (!user || !postText.trim()) return;
                   await crearBorrador(user.uid, {
@@ -1879,23 +2219,35 @@ const ManualPostScreen: React.FC = () => {
                 disabled={!postText.trim()}>
                 Guardar como borrador
               </Button>
-            </div>
+            </motion.div>
 
             {/* Pipeline info */}
-            <div className="p-4 bg-accent/60 rounded-xl space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Pipeline de publicación</p>
-              {[
-                { icon: <Save className="w-3.5 h-3.5" />, label: 'CampusSocial', desc: 'Almacena y programa' },
-                { icon: <ChevronRight className="w-3.5 h-3.5" />, label: 'n8n', desc: 'Automatiza el flujo' },
-                { icon: <ChevronRight className="w-3.5 h-3.5" />, label: 'Postiz', desc: 'Publica en LinkedIn' },
-              ].map((s, i) => (
-                <div key={i} className="flex items-center gap-2 text-xs">
-                  <span className="text-[#667eea]">{s.icon}</span>
-                  <span className="font-medium">{s.label}</span>
-                  <span className="text-muted-foreground">— {s.desc}</span>
-                </div>
-              ))}
-            </div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4, delay: 0.4 }}
+              className="p-5 bg-white/40 dark:bg-accent/30 backdrop-blur-xl border border-white/30 dark:border-border/50 rounded-3xl space-y-3"
+            >
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                <Activity className="w-3.5 h-3.5" />
+                Pipeline de publicación
+              </p>
+              <div className="space-y-2.5">
+                {[
+                  { icon: <Save className="w-4 h-4" />, label: 'CampusSocial', desc: 'Almacena y programa' },
+                  { icon: <ChevronRight className="w-4 h-4" />, label: 'n8n', desc: 'Automatiza el flujo' },
+                  { icon: <ChevronRight className="w-4 h-4" />, label: 'Postiz', desc: 'Publica en LinkedIn' },
+                ].map((s, i) => (
+                  <div key={i} className="flex items-center gap-3 text-xs group">
+                    <div className="w-6 h-6 rounded-lg bg-white/50 dark:bg-accent flex items-center justify-center text-[#06b6d4] shadow-sm group-hover:scale-110 transition-transform">
+                      {s.icon}
+                    </div>
+                    <span className="font-medium text-foreground">{s.label}</span>
+                    <span className="text-muted-foreground/70">— {s.desc}</span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
           </div>
         </div>
       </div>
@@ -1927,137 +2279,174 @@ const DraftsScreen: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNa
   };
 
   const networkIcons: Partial<Record<RedSocial, React.ReactNode>> = {
-    linkedin: <Linkedin className="w-4 h-4 text-blue-600" />,
+    linkedin: <Linkedin className="w-4 h-4 text-[#0a66c2]" />,
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Borradores</h1>
-        <p className="text-muted-foreground">Gestiona tus publicaciones guardadas y programadas</p>
-      </div>
+    <div className="h-full overflow-y-auto">
+      <div className="max-w-[1400px] mx-auto p-4 sm:p-6 lg:p-8">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="mb-8"
+        >
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#0B1F4B] to-[#2BBDE8] dark:from-[#60a5fa] dark:to-[#22d3ee] bg-clip-text text-transparent mb-1">
+            Borradores
+          </h1>
+          <p className="text-muted-foreground text-sm">Gestiona tus publicaciones guardadas y programadas</p>
+        </motion.div>
 
-      {/* Filters */}
-      <div className="flex items-center gap-3 mb-6">
-        {['todos', 'pendientes', 'programados'].map(f => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all
-              ${filter === f 
-                ? 'bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white shadow-lg' 
-                : 'bg-accent text-muted-foreground hover:text-foreground'
-              }`}
-          >
-            {f.charAt(0).toUpperCase() + f.slice(1)}
-          </button>
-        ))}
-      </div>
+        {/* Filters */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="flex items-center gap-3 mb-6 p-1.5 bg-white/40 dark:bg-accent/30 border border-white/40 dark:border-border/50 rounded-2xl w-fit backdrop-blur-md"
+        >
+          {['todos', 'pendientes', 'programados'].map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-5 py-2 rounded-xl text-sm font-medium transition-all duration-300 cursor-pointer
+                ${filter === f 
+                  ? 'bg-gradient-to-r from-[#1e3a8a] to-[#06b6d4] text-white shadow-md shadow-[#06b6d4]/20' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-white/50 dark:hover:bg-accent/50'
+                }`}
+            >
+              {f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+        </motion.div>
 
-      {/* Table */}
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">Título</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">Redes</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">Estado</th>
-                <th className="text-left py-3 px-4 text-sm font-semibold text-muted-foreground">Fecha</th>
-                <th className="text-right py-3 px-4 text-sm font-semibold text-muted-foreground">Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading && (
-                <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">Cargando…</td></tr>
-              )}
-              {!isLoading && filtered.map((draft) => (
-                <tr
-                  key={draft.id}
-                  className="border-b border-border hover:bg-accent/50 transition-colors cursor-pointer"
-                  onClick={() => resumeBorradorAndNavigate(draft, onNavigate)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      resumeBorradorAndNavigate(draft, onNavigate);
-                    }
-                  }}
-                  tabIndex={0}
-                  role="button"
-                  aria-label={`Continuar borrador: ${draft.titulo || draft.promptOriginal.slice(0, 50)}`}
-                >
-                  <td className="py-4 px-4">
-                    <div className="font-medium">{draft.titulo || draft.promptOriginal.slice(0, 50)}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">Clic para continuar editando</div>
-                  </td>
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-2">
-                      {draft.redesDestino.map((net) => (
-                        <div key={net} className="w-6 h-6">
-                          {networkIcons[net as keyof typeof networkIcons]}
-                        </div>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="py-4 px-4">
-                    <Badge variant={statusColors[draft.estado] ?? 'default'}>
-                      {draft.estado}
-                    </Badge>
-                  </td>
-                  <td className="py-4 px-4 text-sm text-muted-foreground">
-                    {formatRelative(toDate(draft.creadoEn))}
-                  </td>
-                  <td className="py-4 px-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <button
-                        type="button"
-                        title="Continuar editando"
-                        className="p-2 hover:bg-accent rounded-lg transition-colors text-[#667eea]"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          resumeBorradorAndNavigate(draft, onNavigate);
-                        }}
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        title="Eliminar"
-                        className="p-2 hover:bg-accent rounded-lg transition-colors"
-                        onClick={async (e) => {
-                          e.stopPropagation();
-                          if (!user || !confirm('¿Eliminar borrador?')) return;
-                          await eliminarBorrador(draft.id);
-                          invalidate();
-                          refetch();
-                        }}
-                      >
-                        <Trash2 className="w-4 h-4 text-red-500" />
-                      </button>
-                    </div>
-                  </td>
+        {/* Table / List */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.2 }}
+          className="bg-white/60 dark:bg-card backdrop-blur-xl border border-white/40 dark:border-border rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden"
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-white/40 dark:border-border/50 bg-white/30 dark:bg-accent/20">
+                  <th className="py-4 px-6 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Título</th>
+                  <th className="py-4 px-6 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Redes</th>
+                  <th className="py-4 px-6 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Estado</th>
+                  <th className="py-4 px-6 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fecha</th>
+                  <th className="py-4 px-6 text-xs font-semibold text-muted-foreground uppercase tracking-wider text-right">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      {/* Empty State (conditional) */}
-      {!isLoading && filtered.length === 0 && (
-        <Card className="mt-6">
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-accent rounded-full flex items-center justify-center mx-auto mb-4">
-              <FileText className="w-8 h-8 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-semibold mb-2">No hay borradores</h3>
-            <p className="text-muted-foreground mb-4">Crea tu primera publicación para verla aquí</p>
-            <Button variant="primary" icon={<Plus />} onClick={() => onNavigate('new-post')}>
-              Nueva publicación
-            </Button>
+              </thead>
+              <tbody className="divide-y divide-white/30 dark:divide-border/40">
+                {isLoading && (
+                  <tr>
+                    <td colSpan={5} className="py-12 text-center">
+                      <Loader2 className="w-6 h-6 text-[#06b6d4] animate-spin mx-auto mb-2" />
+                      <p className="text-sm text-muted-foreground">Cargando borradores...</p>
+                    </td>
+                  </tr>
+                )}
+                {!isLoading && filtered.length > 0 && filtered.map((draft, i) => (
+                  <motion.tr
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: 0.1 + i * 0.05 }}
+                    key={draft.id}
+                    className="hover:bg-white/50 dark:hover:bg-accent/30 transition-colors duration-200 cursor-pointer group"
+                    onClick={() => resumeBorradorAndNavigate(draft, onNavigate)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        resumeBorradorAndNavigate(draft, onNavigate);
+                      }
+                    }}
+                    tabIndex={0}
+                    role="button"
+                    aria-label={`Continuar borrador: ${draft.titulo || draft.promptOriginal.slice(0, 50)}`}
+                  >
+                    <td className="py-4 px-6">
+                      <div className="font-medium text-foreground group-hover:text-[#06b6d4] transition-colors line-clamp-1 max-w-[400px]">
+                        {draft.titulo || draft.promptOriginal.slice(0, 50)}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        Clic para continuar editando
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-2">
+                        {draft.redesDestino.map((net) => (
+                          <div key={net} className="w-8 h-8 rounded-full bg-white/80 dark:bg-accent flex items-center justify-center shadow-sm border border-white/50 dark:border-border">
+                            {networkIcons[net as keyof typeof networkIcons]}
+                          </div>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <Badge variant={statusColors[draft.estado] ?? 'default'} className="shadow-sm">
+                        {draft.estado}
+                      </Badge>
+                    </td>
+                    <td className="py-4 px-6 text-sm text-muted-foreground">
+                      {formatRelative(toDate(draft.creadoEn))}
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          title="Continuar editando"
+                          className="w-8 h-8 rounded-full hover:bg-white/80 dark:hover:bg-accent flex items-center justify-center transition-all duration-300 text-[#06b6d4] hover:scale-110 shadow-sm border border-transparent hover:border-white/50"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            resumeBorradorAndNavigate(draft, onNavigate);
+                          }}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          title="Eliminar"
+                          className="w-8 h-8 rounded-full hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center justify-center transition-all duration-300 text-red-500 hover:scale-110 shadow-sm border border-transparent hover:border-red-100"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!user || !confirm('¿Eliminar borrador?')) return;
+                            await eliminarBorrador(draft.id);
+                            invalidate();
+                            refetch();
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </Card>
-      )}
+        </motion.div>
+
+        {/* Empty State (conditional) */}
+        {!isLoading && filtered.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+            className="mt-6 bg-white/60 dark:bg-card backdrop-blur-xl border border-white/40 dark:border-border rounded-3xl p-12 text-center shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+          >
+            <div className="w-20 h-20 bg-gradient-to-br from-[#1e3a8a]/10 to-[#06b6d4]/10 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner border border-white/50">
+              <FileText className="w-10 h-10 text-[#06b6d4]" />
+            </div>
+            <h3 className="text-xl font-bold bg-gradient-to-r from-[#0B1F4B] to-[#2BBDE8] dark:from-[#60a5fa] dark:to-[#22d3ee] bg-clip-text text-transparent mb-2">No hay borradores</h3>
+            <p className="text-muted-foreground mb-8 max-w-sm mx-auto">
+              Aún no tienes borradores en este estado. Empieza a crear contenido genial y guárdalo aquí para más tarde.
+            </p>
+            <Button variant="liquid" icon={<Plus />} onClick={() => onNavigate('new-post')}>
+              Crear nueva publicación
+            </Button>
+          </motion.div>
+        )}
+      </div>
     </div>
   );
 };
@@ -2098,7 +2487,8 @@ const CalendarScreen: React.FC<{ onNavigate: (screen: string) => void }> = ({ on
 
   const isPostOverdue = (post: Publicacion) => {
     if (post.estado !== 'programado' || !post.fechaProgramada) return false;
-    return toDate(post.fechaProgramada).getTime() <= Date.now();
+    const d = toDate(post.fechaProgramada);
+    return d ? d.getTime() <= Date.now() : false;
   };
 
   const overdueCount = useMemo(
@@ -2151,8 +2541,8 @@ const CalendarScreen: React.FC<{ onNavigate: (screen: string) => void }> = ({ on
   const reprogramarEnDia = async (postId: string, targetDay: number) => {
     const post = allPostsInMonth.find((p) => p.id === postId);
     if (!post?.fechaProgramada) return;
-    const prev = toDate(post.fechaProgramada);
-    const nueva = new Date(anio, mes, targetDay, prev.getHours(), prev.getMinutes(), 0, 0);
+    const prev = post.fechaProgramada ? toDate(post.fechaProgramada) : null;
+    const nueva = new Date(anio, mes, targetDay, prev?.getHours() ?? 0, prev?.getMinutes() ?? 0, 0, 0);
     setMoving(true);
     try {
       await actualizarPublicacion(postId, { fechaProgramada: nueva });
@@ -2171,264 +2561,337 @@ const CalendarScreen: React.FC<{ onNavigate: (screen: string) => void }> = ({ on
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold mb-2">Calendario Editorial</h1>
-          <p className="text-muted-foreground">
-            Visualiza y organiza tus publicaciones programadas. Arrastra una publicación a otro día para reprogramarla.
-          </p>
-        </div>
-        <Button variant="primary" icon={<Plus />} onClick={() => onNavigate('new-post')}>
-          Nueva publicación
-        </Button>
-      </div>
-
-      {useFunctionsEmulator && (
-        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-          <strong>Desarrollo local:</strong> el programador automático de Firebase no corre en el emulador.
-          Este calendario revisa cada minuto y publica lo vencido. En producción (plan Blaze + deploy) lo hace{' '}
-          <code className="text-xs">scheduledPublisher</code> en la nube.
-        </div>
-      )}
-
-      {overdueCount > 0 && (
-        <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
-          {overdueCount} publicación(es) pasaron su hora y siguen programadas. Se publicarán automáticamente en el
-          próximo ciclo (cada 1 min) o usa <strong>Publicar ahora</strong>.
-        </div>
-      )}
-
-      {schedulerMsg && (
-        <div className="mb-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-          {schedulerMsg}
-        </div>
-      )}
-
-      <div className="grid lg:grid-cols-[1fr_320px] gap-6">
-        {/* Calendar Grid */}
-        <Card>
-          <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold capitalize">{monthLabel}</h3>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" onClick={() => setViewDate(new Date(anio, mes - 1, 1))}>Anterior</Button>
-              <Button variant="ghost" size="sm" onClick={() => setViewDate(new Date(anio, mes + 1, 1))}>Siguiente</Button>
-            </div>
+    <div className="h-full overflow-y-auto">
+      <div className="max-w-[1400px] mx-auto p-4 sm:p-6 lg:p-8">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="mb-8 flex flex-col sm:flex-row sm:items-start justify-between gap-4"
+        >
+          <div>
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-[#0B1F4B] to-[#2BBDE8] dark:from-[#60a5fa] dark:to-[#22d3ee] bg-clip-text text-transparent mb-2">Calendario Editorial</h1>
+            <p className="text-muted-foreground text-sm max-w-xl">
+              Visualiza y organiza tus publicaciones programadas. Arrastra una publicación a otro día para reprogramarla.
+            </p>
           </div>
-
-          {/* Days header */}
-          <div className="grid grid-cols-7 gap-2 mb-2">
-            {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(day => (
-              <div key={day} className="text-center text-xs font-semibold text-muted-foreground py-2">
-                {day}
-              </div>
-            ))}
-          </div>
-
-          {/* Calendar days */}
-          <div className="grid grid-cols-7 gap-2">
-            {/* Empty cells for offset */}
-            {Array.from({ length: firstDayOffset }).map((_, i) => (
-              <div key={`empty-${i}`} className="aspect-square" />
-            ))}
-            
-            {/* Days */}
-            {Array.from({ length: daysInMonth }).map((_, i) => {
-              const day = i + 1;
-              const posts = porDia[day] || [];
-              const isSelected = selectedDay === day;
-              const hasContent = posts.length > 0;
-              
-              return (
-                <button
-                  key={day}
-                  type="button"
-                  onClick={() => setSelectedDay(day)}
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setDropTargetDay(day);
-                  }}
-                  onDragLeave={() => setDropTargetDay((d) => (d === day ? null : d))}
-                  onDrop={(e) => {
-                    e.preventDefault();
-                    if (draggingPostId && user) void reprogramarEnDia(draggingPostId, day);
-                  }}
-                  className={`aspect-square p-2 rounded-xl border transition-all relative
-                    ${isSelected ? 'border-primary bg-primary/10' : 'border-border hover:border-primary/50'}
-                    ${dropTargetDay === day && draggingPostId ? 'ring-2 ring-primary ring-offset-2' : ''}
-                    ${hasContent ? 'bg-primary/5' : 'bg-card'}
-                  `}
-                >
-                  <div className="text-sm font-medium">{day}</div>
-                  {hasContent && (
-                    <div className="absolute bottom-1 left-1/2 -translate-x-1/2 flex gap-1">
-                      {posts.slice(0, 3).map(post => (
-                        <div key={post.id} className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-[#667eea] to-[#764ba2]" />
-                      ))}
-                    </div>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </Card>
-
-        {/* Sidebar - Selected Day Posts */}
-        <Card>
-          <h3 className="font-semibold mb-4">
-            {selectedDay ? `${selectedDay} de ${monthLabel}` : 'Selecciona un día'}
-          </h3>
-          
-          {isLoading && <p className="text-sm text-muted-foreground">Cargando…</p>}
-
-          {!isLoading && selectedDay && selectedPosts.length > 0 ? (
-            <div className="space-y-3">
-              {selectedPosts.map((post) => {
-                const fp = toDate(post.fechaProgramada);
-                const red = post.redesDestino[0];
-                const overdue = isPostOverdue(post);
-                return (
-                <div
-                  key={post.id}
-                  draggable={!moving}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => {
-                    if (!dragRef.current) setPreviewPost(post);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setPreviewPost(post);
-                    }
-                  }}
-                  onDragStart={() => {
-                    dragRef.current = true;
-                    setDraggingPostId(post.id);
-                  }}
-                  onDragEnd={() => {
-                    setDraggingPostId(null);
-                    setDropTargetDay(null);
-                    setTimeout(() => {
-                      dragRef.current = false;
-                    }, 0);
-                  }}
-                  className={`p-3 bg-accent/50 rounded-xl hover:bg-accent transition-colors cursor-pointer
-                    ${draggingPostId === post.id ? 'opacity-50 ring-2 ring-primary cursor-grabbing' : 'active:cursor-grab'}`}
-                  title="Clic para previsualizar · arrastra para cambiar la fecha"
-                >
-                  {post.imagenUrl && (
-                    <img src={post.imagenUrl} alt="" className="w-full h-24 object-cover rounded-lg mb-2 pointer-events-none" />
-                  )}
-                  <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{post.contenido}</p>
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <div className="font-medium text-sm mb-1">{post.titulo}</div>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <Clock className="w-3 h-3" />
-                        {fp.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </div>
-                    <Linkedin className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <div className="flex items-center gap-2 mt-3">
-                    {overdue && (
-                      <button
-                        type="button"
-                        disabled={publishingId === post.id}
-                        className="px-2 py-1 text-emerald-700 text-xs hover:bg-emerald-50 rounded-lg transition-colors flex items-center gap-1 font-medium"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void publicarProgramadoAhora(post);
-                        }}
-                      >
-                        {publishingId === post.id ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <Send className="w-3 h-3" />
-                        )}
-                        Publicar ahora
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      className="px-2 py-1 text-muted-foreground text-xs hover:bg-accent rounded-lg transition-colors flex items-center gap-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setPreviewPost(post);
-                      }}
-                    >
-                      <Eye className="w-3 h-3" />
-                      Ver
-                    </button>
-                    <button
-                      type="button"
-                      className="px-2 py-1 text-red-600 text-xs hover:bg-red-50 rounded-lg transition-colors"
-                      onClick={async (e) => {
-                        e.stopPropagation();
-                        if (!user || !confirm('¿Eliminar publicación?')) return;
-                        await eliminarPublicacion(post.id);
-                        if (previewPost?.id === post.id) setPreviewPost(null);
-                        invalidate();
-                      }}
-                    >
-                      Eliminar
-                    </button>
-                  </div>
-                </div>
-              );})}
-            </div>
-          ) : !isLoading && selectedDay ? (
-            <div className="text-center py-8">
-              <div className="w-12 h-12 bg-accent rounded-full flex items-center justify-center mx-auto mb-3">
-                <Calendar className="w-6 h-6 text-muted-foreground" />
-              </div>
-              <p className="text-sm text-muted-foreground">No hay publicaciones programadas</p>
-            </div>
-          ) : null}
-        </Card>
-      </div>
-
-      <Modal
-        isOpen={!!previewPost}
-        onClose={() => setPreviewPost(null)}
-        title={previewPost?.titulo || 'Vista previa'}
-        maxWidthClass="max-w-xl"
-        footer={
-          <Button variant="ghost" onClick={() => setPreviewPost(null)}>
-            Cerrar
+          <Button variant="liquid" icon={<Plus />} onClick={() => onNavigate('new-post')}>
+            Nueva publicación
           </Button>
-        }
-      >
-        {previewPost && (
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              {previewPost.fechaProgramada && (
-                <span className="inline-flex items-center gap-1.5">
-                  <Clock className="w-4 h-4" />
-                  {formatDateTime(toDate(previewPost.fechaProgramada))}
-                </span>
-              )}
-              <Badge variant={previewPost.estado === 'publicado' ? 'success' : 'default'}>
-                {previewPost.estado}
-              </Badge>
-              {previewPost.redesDestino.map((net) => (
-                <Badge key={net} variant="purple">
-                  {net}
-                </Badge>
+        </motion.div>
+
+        {useFunctionsEmulator && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}
+            className="mb-6 rounded-2xl border border-amber-200/50 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/20 backdrop-blur-md px-5 py-4 text-sm text-amber-900 dark:text-amber-200 shadow-sm">
+            <strong className="font-semibold text-amber-700 dark:text-amber-400">Desarrollo local:</strong> el programador automático de Firebase no corre en el emulador.
+            Este calendario revisa cada minuto y publica lo vencido. En producción (plan Blaze + deploy) lo hace{' '}
+            <code className="bg-amber-100/50 dark:bg-amber-900/40 px-1.5 py-0.5 rounded text-xs">scheduledPublisher</code> en la nube.
+          </motion.div>
+        )}
+
+        <AnimatePresence>
+          {overdueCount > 0 && (
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+              className="mb-6 overflow-hidden">
+              <div className="rounded-2xl border border-[#06b6d4]/30 bg-gradient-to-r from-[#1e3a8a]/5 to-[#06b6d4]/5 backdrop-blur-md px-5 py-4 text-sm text-[#1e3a8a] dark:text-[#06b6d4] shadow-sm flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-[#06b6d4]/20 flex items-center justify-center shrink-0">
+                  <Clock className="w-4 h-4 text-[#06b6d4]" />
+                </div>
+                <div>
+                  <span className="font-semibold">{overdueCount} publicación(es) pasaron su hora</span> y siguen programadas. Se publicarán automáticamente en el próximo ciclo (cada 1 min) o usa <strong>Publicar ahora</strong>.
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {schedulerMsg && (
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+              className="mb-6 overflow-hidden">
+              <div className="rounded-2xl border border-emerald-200/50 dark:border-emerald-800/50 bg-emerald-50/50 dark:bg-emerald-950/20 backdrop-blur-md px-5 py-4 text-sm text-emerald-800 dark:text-emerald-300 shadow-sm flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                {schedulerMsg}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <div className="grid lg:grid-cols-[1fr_360px] gap-6">
+          {/* Calendar Grid */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            className="bg-white/60 dark:bg-card backdrop-blur-xl border border-white/40 dark:border-border rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+          >
+            <div className="mb-6 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-foreground capitalize flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-[#06b6d4]" />
+                {monthLabel}
+              </h3>
+              <div className="flex items-center gap-2 bg-white/50 dark:bg-accent/30 p-1 rounded-2xl border border-white/40 dark:border-border">
+                <button onClick={() => setViewDate(new Date(anio, mes - 1, 1))} className="p-2 hover:bg-white dark:hover:bg-accent rounded-xl transition-all text-muted-foreground hover:text-foreground">
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-sm font-medium px-2 text-muted-foreground">Mes</span>
+                <button onClick={() => setViewDate(new Date(anio, mes + 1, 1))} className="p-2 hover:bg-white dark:hover:bg-accent rounded-xl transition-all text-muted-foreground hover:text-foreground">
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Days header */}
+            <div className="grid grid-cols-7 gap-3 mb-3">
+              {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(day => (
+                <div key={day} className="text-center text-xs font-bold text-muted-foreground uppercase tracking-widest py-2">
+                  {day}
+                </div>
               ))}
             </div>
-            <SocialPostPreview
-              network={previewPost.redesDestino[0] || RED_PRINCIPAL}
-              authorName={displayName}
-              authorInitials={initials}
-              content={previewPost.contenido}
-              imageUrl={previewPost.imagenUrl}
-              charLimit={3000}
-            />
-          </div>
-        )}
-      </Modal>
+
+            {/* Calendar days */}
+            <div className="grid grid-cols-7 gap-3">
+              {/* Empty cells for offset */}
+              {Array.from({ length: firstDayOffset }).map((_, i) => (
+                <div key={`empty-${i}`} className="aspect-square opacity-0" />
+              ))}
+              
+              {/* Days */}
+              {Array.from({ length: daysInMonth }).map((_, i) => {
+                const day = i + 1;
+                const posts = porDia[day] || [];
+                const isSelected = selectedDay === day;
+                const hasContent = posts.length > 0;
+                
+                return (
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    key={day}
+                    type="button"
+                    onClick={() => setSelectedDay(day)}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setDropTargetDay(day);
+                    }}
+                    onDragLeave={() => setDropTargetDay((d) => (d === day ? null : d))}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (draggingPostId && user) void reprogramarEnDia(draggingPostId, day);
+                    }}
+                    className={`aspect-square p-2 rounded-2xl border transition-all duration-300 relative flex flex-col
+                      ${isSelected ? 'border-[#06b6d4] bg-gradient-to-br from-[#1e3a8a]/10 to-[#06b6d4]/10 shadow-md shadow-[#06b6d4]/20' : 'border-white/50 dark:border-border/50 hover:border-[#06b6d4]/50 hover:bg-[#06b6d4]/5'}
+                      ${dropTargetDay === day && draggingPostId ? 'ring-2 ring-[#06b6d4] ring-offset-2 ring-offset-transparent bg-[#06b6d4]/10 scale-105' : ''}
+                      ${hasContent && !isSelected ? 'bg-white dark:bg-accent/40 shadow-sm' : ''}
+                      ${!hasContent && !isSelected ? 'bg-white/30 dark:bg-card/50' : ''}
+                    `}
+                  >
+                    <div className={`text-sm font-semibold ml-1 mt-1 ${isSelected ? 'text-[#06b6d4]' : 'text-foreground'}`}>{day}</div>
+                    
+                    {hasContent && (
+                      <div className="mt-auto mb-1 flex flex-col gap-1 w-full px-1">
+                        {posts.slice(0, 2).map(post => (
+                          <div key={post.id} className={`h-1.5 w-full rounded-full ${isPostOverdue(post) ? 'bg-red-400' : 'bg-gradient-to-r from-[#1e3a8a] to-[#06b6d4]'}`} />
+                        ))}
+                        {posts.length > 2 && (
+                          <div className="text-[10px] text-muted-foreground font-medium text-right leading-none">+{posts.length - 2}</div>
+                        )}
+                      </div>
+                    )}
+                  </motion.button>
+                );
+              })}
+            </div>
+          </motion.div>
+
+          {/* Sidebar - Selected Day Posts */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+            className="bg-white/60 dark:bg-card backdrop-blur-xl border border-white/40 dark:border-border rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-fit sticky top-8"
+          >
+            <h3 className="text-lg font-bold mb-5 flex items-center gap-2">
+              <CalendarClock className="w-5 h-5 text-[#06b6d4]" />
+              {selectedDay ? `${selectedDay} de ${monthLabel}` : 'Selecciona un día'}
+            </h3>
+            
+            {isLoading && (
+              <div className="flex flex-col items-center justify-center py-10">
+                <Loader2 className="w-6 h-6 text-[#06b6d4] animate-spin mb-3" />
+                <p className="text-sm text-muted-foreground">Cargando...</p>
+              </div>
+            )}
+
+            {!isLoading && selectedDay && selectedPosts.length > 0 ? (
+              <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 -mr-2">
+                <AnimatePresence>
+                  {selectedPosts.map((post, i) => {
+                    const fp = toDate(post.fechaProgramada);
+                    const overdue = isPostOverdue(post);
+                    return (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.2, delay: i * 0.05 }}
+                      key={post.id}
+                      draggable={!moving}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => {
+                        if (!dragRef.current) setPreviewPost(post);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setPreviewPost(post);
+                        }
+                      }}
+                      onDragStart={() => {
+                        dragRef.current = true;
+                        setDraggingPostId(post.id);
+                      }}
+                      onDragEnd={() => {
+                        setDraggingPostId(null);
+                        setDropTargetDay(null);
+                        setTimeout(() => {
+                          dragRef.current = false;
+                        }, 0);
+                      }}
+                      className={`p-4 bg-white/80 dark:bg-accent/50 rounded-2xl border border-white/60 dark:border-border/50 hover:bg-white dark:hover:bg-accent shadow-sm hover:shadow-md transition-all cursor-pointer relative group overflow-hidden
+                        ${draggingPostId === post.id ? 'opacity-50 ring-2 ring-[#06b6d4] cursor-grabbing scale-95' : 'active:cursor-grab'}
+                        ${overdue ? 'border-red-200 dark:border-red-900/50 bg-red-50/30 dark:bg-red-950/10' : ''}`}
+                      title="Clic para previsualizar · arrastra para cambiar la fecha"
+                    >
+                      {/* Drag handle indicator */}
+                      <div className="absolute left-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="w-1 h-8 rounded-full bg-border" />
+                      </div>
+
+                      {post.imagenUrl && (
+                        <div className="w-full h-32 rounded-xl overflow-hidden mb-3">
+                          <img src={post.imagenUrl} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 pointer-events-none" />
+                        </div>
+                      )}
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1 pr-3">
+                          <div className="font-semibold text-sm line-clamp-1 mb-1 group-hover:text-[#06b6d4] transition-colors">{post.titulo}</div>
+                          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-accent w-fit px-2 py-0.5 rounded-lg">
+                            <Clock className="w-3 h-3 text-[#06b6d4]" />
+                            {fp ? fp.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : ''}
+                          </div>
+                        </div>
+                        <div className="w-7 h-7 rounded-full bg-[#0a66c2]/10 flex items-center justify-center shrink-0">
+                          <Linkedin className="w-3.5 h-3.5 text-[#0a66c2]" />
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground line-clamp-2 mb-3 pl-1 leading-relaxed">{post.contenido}</p>
+                      
+                      <div className="flex items-center gap-2 pt-3 border-t border-border/50">
+                        {overdue && (
+                          <button
+                            type="button"
+                            disabled={publishingId === post.id}
+                            className="flex-1 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5 font-semibold"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void publicarProgramadoAhora(post);
+                            }}
+                          >
+                            {publishingId === post.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Send className="w-3.5 h-3.5" />
+                            )}
+                            Publicar
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="flex-1 py-1.5 text-muted-foreground text-xs hover:bg-accent rounded-lg transition-colors flex items-center justify-center gap-1.5 font-medium border border-transparent hover:border-border"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPreviewPost(post);
+                          }}
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          Ver
+                        </button>
+                        <button
+                          type="button"
+                          className="px-3 py-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            if (!user || !confirm('¿Eliminar publicación?')) return;
+                            await eliminarPublicacion(post.id);
+                            if (previewPost?.id === post.id) setPreviewPost(null);
+                            invalidate();
+                          }}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </motion.div>
+                  );})}
+                </AnimatePresence>
+              </div>
+            ) : !isLoading && selectedDay ? (
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center py-12 bg-white/40 dark:bg-accent/20 rounded-2xl border border-dashed border-border/50">
+                <div className="w-14 h-14 bg-gradient-to-br from-accent to-background border border-border/50 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+                  <Calendar className="w-6 h-6 text-muted-foreground/70" />
+                </div>
+                <p className="text-sm font-medium text-foreground mb-1">Día libre</p>
+                <p className="text-xs text-muted-foreground px-4">No hay publicaciones programadas para este día.</p>
+              </motion.div>
+            ) : null}
+          </motion.div>
+        </div>
+
+        <Modal
+          isOpen={!!previewPost}
+          onClose={() => setPreviewPost(null)}
+          title={previewPost?.titulo || 'Vista previa'}
+          maxWidthClass="max-w-xl"
+          footer={
+            <Button variant="outline" onClick={() => setPreviewPost(null)} className="w-full sm:w-auto">
+              Cerrar vista previa
+            </Button>
+          }
+        >
+          {previewPost && (
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground bg-accent/50 p-3 rounded-2xl border border-border/50">
+                {previewPost.fechaProgramada && (
+                  <span className="inline-flex items-center gap-1.5 font-medium bg-white dark:bg-card px-2.5 py-1 rounded-lg shadow-sm border border-border/50">
+                    <Clock className="w-4 h-4 text-[#06b6d4]" />
+                    {formatDateTime(toDate(previewPost.fechaProgramada))}
+                  </span>
+                )}
+                <Badge variant={previewPost.estado === 'publicado' ? 'success' : 'default'} className="shadow-sm">
+                  {previewPost.estado}
+                </Badge>
+                {previewPost.redesDestino.map((net) => (
+                  <Badge key={net} variant="purple" className="shadow-sm">
+                    {net}
+                  </Badge>
+                ))}
+              </div>
+              <div className="bg-white/50 dark:bg-black/20 rounded-2xl overflow-hidden shadow-inner border border-border/50 backdrop-blur-sm">
+                <SocialPostPreview
+                  network={previewPost.redesDestino[0] || RED_PRINCIPAL}
+                  authorName={displayName}
+                  authorInitials={initials}
+                  content={previewPost.contenido}
+                  imageUrl={previewPost.imagenUrl}
+                  charLimit={3000}
+                />
+              </div>
+            </div>
+          )}
+        </Modal>
+      </div>
     </div>
   );
 };
@@ -2547,116 +3010,205 @@ const AgentScreen: React.FC<{ onNavigate: (screen: string) => void }> = ({ onNav
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto h-[calc(100vh-4rem)]">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Asistente IA</h1>
-        <p className="text-muted-foreground">Apartado del agente CampusSocial: ideas, edición y copy para LinkedIn (Gemini)</p>
-      </div>
-
-      <div className="grid lg:grid-cols-[1fr_280px] gap-6 h-[calc(100%-5rem)]">
-        {/* Chat Area */}
-        <Card className="flex flex-col">
-          {/* Banner */}
-          <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-xl mb-4">
-            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-            <span className="text-sm text-emerald-900">
-              {backendOk === false || error
-                ? `Sin conexión IA${aiHint ? ` · ${aiHint}` : ''}`
-                : `Asistente de marketing · ${aiHint || 'IA activa'}`}
-            </span>
-          </div>
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto space-y-4 mb-4">
-            {messages.map((msg, i) => (
-              <div key={i} className={`flex flex-col gap-2 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
-                <div className={`max-w-[80%] px-4 py-3 rounded-2xl whitespace-pre-wrap ${
-                  msg.role === 'user' 
-                    ? 'bg-gradient-to-r from-[#667eea] to-[#764ba2] text-white ml-auto' 
-                    : 'bg-accent text-foreground'
-                }`}>
-                  {msg.role === 'bot' ? (
-                    <ChatMessageBody text={msg.text} />
-                  ) : (
-                    <p className="text-sm leading-relaxed">{msg.text}</p>
-                  )}
-                </div>
-                {msg.role === 'bot' && msg.accionSugerida === 'generar_publicacion' && (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    icon={<PenSquare className="w-4 h-4" />}
-                    onClick={() =>
-                      irAGenerarPublicacion(
-                        msg.temaSugerido || lastUserPrompt,
-                        msg.tonoSugerido || 'profesional'
-                      )
-                    }
-                  >
-                    Generar publicación
-                  </Button>
-                )}
-                {msg.role === 'bot' && msg.accionSugerida === 'ver_calendario' && (
-                  <Button variant="outline" size="sm" icon={<Calendar className="w-4 h-4" />} onClick={() => onNavigate('calendar')}>
-                    Ver calendario
-                  </Button>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Input */}
-          <div className="flex items-center gap-3 pt-4 border-t border-border">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Escribe tu mensaje..."
-              className="flex-1 px-4 py-3 bg-accent rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-            <Button variant="primary" icon={<Send />} onClick={handleSend}>
-              Enviar
-            </Button>
-          </div>
-        </Card>
-
-        {/* Quick Actions Sidebar */}
-        <Card>
-          <h3 className="font-semibold mb-4">Acciones rápidas</h3>
-          <Button
-            variant="primary"
-            className="w-full mb-4"
-            icon={<Sparkles />}
-            onClick={() => irAGenerarPublicacion(lastUserPrompt || input || 'Publicación Campus Lands')}
-          >
-            Generar publicación
-          </Button>
-          <p className="text-xs text-muted-foreground mb-3">
-            Abre Nueva publicación con el tema del chat y genera el borrador con IA automáticamente.
+    <div className="h-full flex flex-col overflow-hidden">
+      <div className="max-w-[1400px] w-full mx-auto p-4 sm:p-6 lg:p-8 flex-1 flex flex-col min-h-0">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="mb-6 shrink-0"
+        >
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#0B1F4B] to-[#2BBDE8] dark:from-[#60a5fa] dark:to-[#22d3ee] bg-clip-text text-transparent mb-1">
+            Asistente IA
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Apartado del agente CampusSocial: ideas, edición y copy para LinkedIn (Gemini)
           </p>
-          <div className="space-y-2">
-            {quickActions.map((action, i) => (
-              <button
-                key={i}
-                onClick={() => setInput(action)}
-                className="w-full text-left px-4 py-3 bg-accent hover:bg-purple-50 hover:border-purple-200 border border-transparent rounded-xl text-sm transition-all"
-              >
-                {action}
-              </button>
-            ))}
-          </div>
+        </motion.div>
 
-          <div className="mt-6 pt-6 border-t border-border">
-            <h4 className="text-sm font-semibold mb-3">Sugerencias</h4>
-            <div className="space-y-2 text-xs text-muted-foreground">
-              <p>• Pide ideas de contenido específicas</p>
-              <p>• Solicita optimización de copy</p>
-              <p>• Genera hashtags relevantes</p>
-              <p>• Analiza borradores guardados</p>
+        <div className="grid lg:grid-cols-[1fr_300px] gap-6 flex-1 min-h-0">
+          {/* Chat Area */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            className="flex flex-col bg-white/60 dark:bg-card backdrop-blur-xl border border-white/40 dark:border-border rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] overflow-hidden"
+          >
+            {/* Banner */}
+            <div className="px-5 py-3 bg-white/40 dark:bg-accent/20 border-b border-white/40 dark:border-border/50 flex items-center justify-between shrink-0 backdrop-blur-md">
+              <div className="flex items-center gap-3">
+                <div className="relative flex h-3 w-3">
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${backendOk === false || error ? 'bg-red-400' : 'bg-[#06b6d4]'}`}></span>
+                  <span className={`relative inline-flex rounded-full h-3 w-3 ${backendOk === false || error ? 'bg-red-500' : 'bg-[#06b6d4]'}`}></span>
+                </div>
+                <span className="text-sm font-medium text-foreground">
+                  {backendOk === false || error
+                    ? `Sin conexión IA${aiHint ? ` · ${aiHint}` : ''}`
+                    : `Asistente de marketing`}
+                </span>
+              </div>
+              {backendOk && !error && <span className="text-xs font-semibold px-2 py-1 bg-[#06b6d4]/10 text-[#06b6d4] rounded-lg">{aiHint || 'IA Activa'}</span>}
             </div>
-          </div>
-        </Card>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-6 scroll-smooth">
+              <AnimatePresence initial={false}>
+                {messages.map((msg, i) => (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                    key={i}
+                    className={`flex flex-col gap-2 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}
+                  >
+                    <div className="flex items-end gap-2 max-w-[85%]">
+                      {msg.role === 'bot' && (
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1e3a8a] to-[#06b6d4] flex items-center justify-center shrink-0 shadow-sm text-white mb-1">
+                          <Sparkles className="w-4 h-4" />
+                        </div>
+                      )}
+                      <div className={`px-5 py-3.5 rounded-2xl whitespace-pre-wrap shadow-sm ${
+                        msg.role === 'user' 
+                          ? 'bg-gradient-to-r from-[#1e3a8a] to-[#06b6d4] text-white ml-auto rounded-br-sm' 
+                          : 'bg-white dark:bg-accent border border-white/50 dark:border-border/50 text-foreground rounded-bl-sm'
+                      }`}>
+                        {msg.role === 'bot' ? (
+                          <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-a:text-[#06b6d4]">
+                            <ChatMessageBody text={msg.text} />
+                          </div>
+                        ) : (
+                          <p className="text-sm leading-relaxed">{msg.text}</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Action buttons from bot */}
+                    {msg.role === 'bot' && (msg.accionSugerida === 'generar_publicacion' || msg.accionSugerida === 'ver_calendario') && (
+                      <div className="ml-10 flex gap-2 mt-1">
+                        {msg.accionSugerida === 'generar_publicacion' && (
+                          <Button
+                            variant="liquid"
+                            size="sm"
+                            icon={<PenSquare className="w-4 h-4" />}
+                            onClick={() =>
+                              irAGenerarPublicacion(
+                                msg.temaSugerido || lastUserPrompt,
+                                msg.tonoSugerido || 'profesional'
+                              )
+                            }
+                          >
+                            Generar publicación
+                          </Button>
+                        )}
+                        {msg.accionSugerida === 'ver_calendario' && (
+                          <Button variant="outline" size="sm" icon={<Calendar className="w-4 h-4" />} onClick={() => onNavigate('calendar')}>
+                            Ver calendario
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+              {sending && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-end gap-2">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1e3a8a] to-[#06b6d4] flex items-center justify-center shrink-0 shadow-sm text-white mb-1">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div className="px-5 py-4 bg-white dark:bg-accent border border-white/50 dark:border-border/50 rounded-2xl rounded-bl-sm flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-[#06b6d4] animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 rounded-full bg-[#06b6d4] animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 rounded-full bg-[#06b6d4] animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </motion.div>
+              )}
+            </div>
+
+            {/* Input */}
+            <div className="p-4 bg-white/40 dark:bg-accent/20 border-t border-white/40 dark:border-border/50 shrink-0 backdrop-blur-md">
+              <div className="flex items-end gap-3 relative">
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSend();
+                    }
+                  }}
+                  placeholder="Pide ideas, optimiza copy, o genera contenido..."
+                  className="flex-1 bg-white/70 dark:bg-input-background border border-white/60 dark:border-input rounded-2xl px-5 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#06b6d4]/30 focus:border-[#06b6d4]/50 hover:bg-white transition-all shadow-inner resize-none min-h-[52px] max-h-[120px]"
+                  rows={1}
+                />
+                <button 
+                  onClick={handleSend}
+                  disabled={!input.trim() || sending}
+                  className="w-[52px] h-[52px] rounded-2xl bg-gradient-to-br from-[#1e3a8a] to-[#06b6d4] text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 disabled:cursor-not-allowed shadow-md shadow-[#06b6d4]/20 shrink-0"
+                >
+                  <Send className="w-5 h-5 ml-1" />
+                </button>
+              </div>
+              <div className="text-center mt-2">
+                <span className="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">CampusSocial AI • Gemini Powered</span>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Quick Actions Sidebar */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+            className="bg-white/60 dark:bg-card backdrop-blur-xl border border-white/40 dark:border-border rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col shrink-0 overflow-y-auto"
+          >
+            <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <Zap className="w-5 h-5 text-[#06b6d4]" />
+              Acciones rápidas
+            </h3>
+            
+            <Button
+              variant="liquid"
+              className="w-full mb-4 shadow-md shadow-[#06b6d4]/20"
+              icon={<Sparkles className="w-4 h-4" />}
+              onClick={() => irAGenerarPublicacion(lastUserPrompt || input || 'Publicación Campus Lands')}
+            >
+              Generar publicación
+            </Button>
+            <p className="text-xs text-muted-foreground mb-6 leading-relaxed">
+              Abre Nueva publicación con el tema del chat y genera el borrador con IA automáticamente.
+            </p>
+            
+            <div className="space-y-2.5">
+              {quickActions.map((action, i) => (
+                <button
+                  key={i}
+                  onClick={() => setInput(action)}
+                  className="w-full text-left px-4 py-3 bg-white/50 dark:bg-accent/40 hover:bg-white dark:hover:bg-accent border border-white/60 dark:border-border/50 rounded-xl text-sm transition-all duration-200 hover:shadow-sm hover:border-[#06b6d4]/30 group flex items-center justify-between"
+                >
+                  <span className="text-foreground font-medium">{action}</span>
+                  <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-[#06b6d4] transition-colors" />
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-white/40 dark:border-border/50">
+              <h4 className="text-sm font-bold mb-3 uppercase tracking-wider text-muted-foreground">Sugerencias</h4>
+              <ul className="space-y-3">
+                {[
+                  'Pide ideas de contenido específicas',
+                  'Solicita optimización de copy',
+                  'Genera hashtags relevantes',
+                  'Analiza borradores guardados'
+                ].map((sug, i) => (
+                  <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground font-medium">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#06b6d4] mt-1 shrink-0" />
+                    {sug}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </motion.div>
+        </div>
       </div>
     </div>
   );
@@ -2835,105 +3387,161 @@ const SettingsScreen: React.FC = () => {
   }, [config]);
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">Ajustes</h1>
-        <p className="text-muted-foreground">Configura integraciones y preferencias de la plataforma</p>
-      </div>
+    <div className="h-full overflow-y-auto">
+      <div className="max-w-[1000px] mx-auto p-4 sm:p-6 lg:p-8">
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="mb-8"
+        >
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-[#0B1F4B] to-[#2BBDE8] dark:from-[#60a5fa] dark:to-[#22d3ee] bg-clip-text text-transparent mb-1">
+            Ajustes
+          </h1>
+          <p className="text-muted-foreground text-sm">Configura integraciones y preferencias de la plataforma</p>
+        </motion.div>
 
-      <div className="space-y-6">
-        <Card>
-          <h3 className="font-semibold mb-2 flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-purple-600" />
-            Secretos del servidor
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            Gemini, Telegram y Postiz se configuran con Firebase Secrets en el Backend, no aquí.
-          </p>
-        </Card>
-
-        {/* n8n / Make Webhook */}
-        <Card>
-          <h3 className="font-semibold mb-4 flex items-center gap-2">
-            <Network className="w-5 h-5 text-emerald-600" />
-            Automatización Make / n8n
-          </h3>
-          <div className="space-y-4">
-            <Input
-              label="URL del webhook (Make o n8n)"
-              value={automationWebhook}
-              onChange={(e) => setAutomationWebhook(e.target.value)}
-              placeholder="https://hook.us2.make.com/xxxxxxxx"
-            />
-            <p className="text-xs text-muted-foreground">
-              Secreto en <code className="text-xs">Backend/.secret.local</code>:{' '}
-              <code className="text-xs">MAKE_WEBHOOK_SECRET</code> = API key del Custom webhook en Make
-              (no el token de API access). Headers: <code className="text-xs">x-make-apikey</code> y{' '}
-              <code className="text-xs">X-Campus-Secret</code>. Guía:{' '}
-              <code className="text-xs">Flujo_Automatizacion/POSTMAN_MAKE.md</code>
-            </p>
-            <p className="text-xs text-muted-foreground">
-              n8n local: <code className="text-xs">cd Flujo_Automatizacion &amp;&amp; docker compose up -d</code>
-            </p>
-          </div>
-        </Card>
-
-        <Card>
-          <h3 className="font-semibold mb-4 flex items-center gap-2">
-            <Settings className="w-5 h-5 text-gray-600" />
-            Preferencias
-          </h3>
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium">Zona horaria</label>
-              <select
-                value={timezone}
-                onChange={(e) => setTimezone(e.target.value)}
-                className="w-full px-4 py-2.5 border rounded-xl text-sm"
-              >
-                <option value="America/Bogota">Colombia (Bogotá)</option>
-                <option value="America/Mexico_City">México</option>
-                <option value="UTC">UTC</option>
-              </select>
-            </div>
-            <Toggle label="Notificaciones" checked={notifications} onChange={setNotifications} />
-          </div>
-        </Card>
-
-        {saveError && <p className="text-sm text-destructive">{saveError}</p>}
-        <div className="flex justify-end gap-3">
-          <Button
-            variant="success"
-            icon={saving ? <Loader2 className="animate-spin" /> : <CheckCircle2 />}
-            disabled={saving || !user || isLoading}
-            onClick={async () => {
-              if (!user) return;
-              setSaving(true);
-              setSaveError('');
-              try {
-                if (notifications && typeof Notification !== 'undefined') {
-                  if (Notification.permission === 'default') {
-                    await Notification.requestPermission();
-                  }
-                }
-                await guardarConfiguracion(user.uid, {
-                  n8nWebhookUrl: automationWebhook.trim(),
-                  makeWebhookUrl: automationWebhook.trim(),
-                  notifications,
-                  timezone,
-                });
-                invalidate();
-                setSaved(true);
-                setTimeout(() => setSaved(false), 2000);
-              } catch (e) {
-                setSaveError(e instanceof Error ? e.message : 'No se pudo guardar. ¿Emulador activo?');
-              } finally {
-                setSaving(false);
-              }
-            }}
+        <div className="space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 }}
+            className="bg-white/60 dark:bg-card backdrop-blur-xl border border-white/40 dark:border-border rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
           >
-            {saved ? 'Guardado' : 'Guardar cambios'}
-          </Button>
+            <h3 className="font-semibold mb-3 flex items-center gap-2 text-foreground">
+              <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center shrink-0">
+                <Sparkles className="w-4 h-4 text-purple-600" />
+              </div>
+              Secretos del servidor
+            </h3>
+            <p className="text-sm text-muted-foreground ml-10">
+              Gemini, Telegram y Postiz se configuran con Firebase Secrets en el Backend, no aquí.
+            </p>
+          </motion.div>
+
+          {/* n8n / Make Webhook */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.2 }}
+            className="bg-white/60 dark:bg-card backdrop-blur-xl border border-white/40 dark:border-border rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+          >
+            <h3 className="font-semibold mb-5 flex items-center gap-2 text-foreground">
+              <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
+                <Network className="w-4 h-4 text-emerald-600" />
+              </div>
+              Automatización Make / n8n
+            </h3>
+            <div className="space-y-4 ml-10">
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <Network className="h-5 w-5 text-muted-foreground group-focus-within:text-[#06b6d4] transition-colors" />
+                </div>
+                <input
+                  type="text"
+                  value={automationWebhook}
+                  onChange={(e) => setAutomationWebhook(e.target.value)}
+                  placeholder="https://hook.us2.make.com/xxxxxxxx"
+                  className="w-full pl-11 pr-4 py-3 bg-white/50 dark:bg-input-background border border-white/40 dark:border-input rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#06b6d4]/30 focus:border-[#06b6d4]/50 hover:bg-white/70 transition-all shadow-inner"
+                />
+              </div>
+              <div className="p-4 bg-accent/40 rounded-2xl border border-border/50 text-xs text-muted-foreground space-y-2">
+                <p>
+                  Secreto en <code className="bg-background px-1.5 py-0.5 rounded text-[11px] font-mono border border-border">Backend/.secret.local</code>:{' '}
+                  <code className="bg-background px-1.5 py-0.5 rounded text-[11px] font-mono border border-border">MAKE_WEBHOOK_SECRET</code> = API key del Custom webhook en Make
+                  (no el token de API access). Headers: <code className="bg-background px-1.5 py-0.5 rounded text-[11px] font-mono border border-border">x-make-apikey</code> y{' '}
+                  <code className="bg-background px-1.5 py-0.5 rounded text-[11px] font-mono border border-border">X-Campus-Secret</code>. Guía:{' '}
+                  <code className="bg-background px-1.5 py-0.5 rounded text-[11px] font-mono border border-border">Flujo_Automatizacion/POSTMAN_MAKE.md</code>
+                </p>
+                <p>
+                  n8n local: <code className="bg-background px-1.5 py-0.5 rounded text-[11px] font-mono border border-border">cd Flujo_Automatizacion &amp;&amp; docker compose up -d</code>
+                </p>
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.3 }}
+            className="bg-white/60 dark:bg-card backdrop-blur-xl border border-white/40 dark:border-border rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]"
+          >
+            <h3 className="font-semibold mb-5 flex items-center gap-2 text-foreground">
+              <div className="w-8 h-8 rounded-full bg-slate-500/10 flex items-center justify-center shrink-0">
+                <Settings className="w-4 h-4 text-slate-600" />
+              </div>
+              Preferencias
+            </h3>
+            <div className="space-y-6 ml-10">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">Zona horaria</label>
+                <select
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/50 dark:bg-input-background border border-white/40 dark:border-input rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#06b6d4]/30 focus:border-[#06b6d4]/50 hover:bg-white/70 transition-all shadow-inner cursor-pointer"
+                >
+                  <option value="America/Bogota">Colombia (Bogotá)</option>
+                  <option value="America/Mexico_City">México</option>
+                  <option value="UTC">UTC</option>
+                </select>
+              </div>
+              <div className="flex items-center justify-between p-4 bg-white/50 dark:bg-accent/40 rounded-2xl border border-white/40 dark:border-border/50">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Notificaciones</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Recibir alertas en el navegador</p>
+                </div>
+                <Toggle checked={notifications} onChange={setNotifications} />
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.4 }}
+            className="flex flex-col items-end gap-3 pt-4"
+          >
+            <AnimatePresence>
+              {saveError && (
+                <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="text-sm text-red-500 bg-red-50 px-4 py-2 rounded-xl">
+                  {saveError}
+                </motion.p>
+              )}
+            </AnimatePresence>
+            <Button
+              variant="liquid"
+              icon={saving ? <Loader2 className="animate-spin w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+              disabled={saving || !user || isLoading}
+              onClick={async () => {
+                if (!user) return;
+                setSaving(true);
+                setSaveError('');
+                try {
+                  if (notifications && typeof Notification !== 'undefined') {
+                    if (Notification.permission === 'default') {
+                      await Notification.requestPermission();
+                    }
+                  }
+                  await guardarConfiguracion(user.uid, {
+                    n8nWebhookUrl: automationWebhook.trim(),
+                    makeWebhookUrl: automationWebhook.trim(),
+                    notifications,
+                    timezone,
+                  });
+                  invalidate();
+                  setSaved(true);
+                  setTimeout(() => setSaved(false), 2000);
+                } catch (e) {
+                  setSaveError(e instanceof Error ? e.message : 'No se pudo guardar. ¿Emulador activo?');
+                } finally {
+                  setSaving(false);
+                }
+              }}
+              className="min-w-[160px] shadow-md shadow-[#06b6d4]/20"
+            >
+              {saved ? '¡Guardado!' : 'Guardar cambios'}
+            </Button>
+          </motion.div>
         </div>
       </div>
     </div>
@@ -2944,66 +3552,111 @@ const DashboardHome: React.FC = () => {
   const { stats, isLoading } = useDashboardStats();
   const { data: actividad = [], isLoading: loadingAct } = useActividad();
 
+  const statCards = [
+    { label: 'Posts publicados', value: stats.publicados, icon: <BarChart3 className="w-6 h-6" />, color: 'from-[#1e3a8a]/10 to-[#06b6d4]/10', iconColor: 'text-[#1e3a8a]' },
+    { label: 'Programados', value: stats.programados, icon: <Calendar className="w-6 h-6" />, color: 'from-emerald-50 to-teal-50', iconColor: 'text-emerald-600' },
+    { label: 'Borradores', value: stats.borradores, icon: <FileText className="w-6 h-6" />, color: 'from-amber-50 to-orange-50', iconColor: 'text-amber-600' },
+  ];
+
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Panel principal</h1>
-      <div className="grid md:grid-cols-3 gap-4 mb-6">
-        <Card>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Posts publicados</p>
-              <p className="text-2xl font-bold mt-1">{isLoading ? '…' : stats.publicados}</p>
-            </div>
-            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-              <BarChart3 className="w-6 h-6 text-purple-600" />
-            </div>
-          </div>
-        </Card>
-        <Card>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Programados</p>
-              <p className="text-2xl font-bold mt-1">{isLoading ? '…' : stats.programados}</p>
-            </div>
-            <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-emerald-600" />
-            </div>
-          </div>
-        </Card>
-        <Card>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Borradores</p>
-              <p className="text-2xl font-bold mt-1">{isLoading ? '…' : stats.borradores}</p>
-            </div>
-            <div className="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
-              <FileText className="w-6 h-6 text-amber-600" />
-            </div>
-          </div>
-        </Card>
-      </div>
-      <Card>
-        <h3 className="font-semibold mb-4">Actividad reciente</h3>
-        {loadingAct && <p className="text-sm text-muted-foreground">Cargando…</p>}
-        {!loadingAct && actividad.length === 0 && (
-          <p className="text-sm text-muted-foreground">Sin actividad aún. Crea una publicación.</p>
-        )}
-        <div className="space-y-3">
-          {actividad.map((a) => (
-            <div key={a.id} className="flex items-center gap-3 p-3 bg-accent/50 rounded-xl">
-              {a.tipo === 'publicado' && <CheckCircle2 className="w-5 h-5 text-emerald-600" />}
-              {a.tipo === 'programado' && <Calendar className="w-5 h-5 text-purple-600" />}
-              {a.tipo === 'borrador' && <FileText className="w-5 h-5 text-amber-600" />}
-              {a.tipo === 'sistema' && <CheckCircle2 className="w-5 h-5 text-blue-600" />}
-              {a.tipo === 'error' && <X className="w-5 h-5 text-red-600" />}
-              <div className="flex-1">
-                <p className="text-sm font-medium">{a.mensaje}</p>
-                <p className="text-xs text-muted-foreground">{formatRelative(toDate(a.creadoEn))}</p>
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+      >
+        <h1 className="text-2xl font-bold bg-gradient-to-r from-[#0B1F4B] to-[#2BBDE8] dark:from-[#60a5fa] dark:to-[#22d3ee] bg-clip-text text-transparent">Panel principal</h1>
+        <p className="text-sm text-muted-foreground mt-1">Resumen de tu actividad en CampusSocial</p>
+      </motion.div>
+
+      {/* Stat Cards */}
+      <div className="grid md:grid-cols-3 gap-4">
+        {statCards.map((card, i) => (
+          <motion.div
+            key={card.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.1 * (i + 1) }}
+          >
+            <div className="group relative bg-white/60 dark:bg-card backdrop-blur-xl border border-white/40 dark:border-border rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-2xl hover:shadow-[#06b6d4]/8 hover:-translate-y-1 transition-all duration-300 cursor-default">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">{card.label}</p>
+                  <motion.p
+                    className="text-3xl font-bold mt-2"
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5, delay: 0.2 * (i + 1), type: 'spring', stiffness: 200 }}
+                  >
+                    {isLoading ? '…' : card.value}
+                  </motion.p>
+                </div>
+                <div className={`w-14 h-14 bg-gradient-to-br ${card.color} rounded-2xl flex items-center justify-center ${card.iconColor} group-hover:scale-110 transition-transform duration-300`}>
+                  {card.icon}
+                </div>
               </div>
             </div>
-          ))}
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Activity Feed */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, delay: 0.4 }}
+      >
+        <div className="bg-white/60 dark:bg-card backdrop-blur-xl border border-white/40 dark:border-border rounded-3xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
+          <h3 className="font-semibold mb-5 flex items-center gap-2">
+            <Zap className="w-5 h-5 text-[#06b6d4]" />
+            Actividad reciente
+          </h3>
+          {loadingAct && (
+            <div className="flex items-center gap-3 py-8 justify-center">
+              <Loader2 className="w-5 h-5 animate-spin text-[#06b6d4]" />
+              <p className="text-sm text-muted-foreground">Cargando…</p>
+            </div>
+          )}
+          {!loadingAct && actividad.length === 0 && (
+            <div className="text-center py-10">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#1e3a8a]/10 to-[#06b6d4]/10 rounded-2xl flex items-center justify-center">
+                <Sparkles className="w-8 h-8 text-[#06b6d4]" />
+              </div>
+              <p className="text-sm text-muted-foreground">Sin actividad aún. ¡Crea tu primera publicación!</p>
+            </div>
+          )}
+          <div className="space-y-2">
+            {actividad.map((a, idx) => (
+              <motion.div
+                key={a.id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, delay: 0.05 * idx }}
+                className="flex items-center gap-3 p-3 rounded-2xl hover:bg-accent/40 transition-colors duration-200"
+              >
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                  a.tipo === 'publicado' ? 'bg-emerald-100 text-emerald-600' :
+                  a.tipo === 'programado' ? 'bg-[#1e3a8a]/10 text-[#1e3a8a]' :
+                  a.tipo === 'borrador' ? 'bg-amber-100 text-amber-600' :
+                  a.tipo === 'error' ? 'bg-red-100 text-red-600' :
+                  'bg-[#06b6d4]/10 text-[#06b6d4]'
+                }`}>
+                  {a.tipo === 'publicado' && <CheckCircle2 className="w-4 h-4" />}
+                  {a.tipo === 'programado' && <Calendar className="w-4 h-4" />}
+                  {a.tipo === 'borrador' && <FileText className="w-4 h-4" />}
+                  {a.tipo === 'sistema' && <CheckCircle2 className="w-4 h-4" />}
+                  {a.tipo === 'error' && <X className="w-4 h-4" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{a.mensaje}</p>
+                  <p className="text-xs text-muted-foreground">{formatRelative(toDate(a.creadoEn))}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
         </div>
-      </Card>
+      </motion.div>
     </div>
   );
 };

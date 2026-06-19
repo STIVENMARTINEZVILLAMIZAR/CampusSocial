@@ -22,7 +22,7 @@ if (platform() === 'win32') {
   console.log('→ Liberando puertos 4000, 5001, 8080, 9199…');
   spawnSync(
     'powershell',
-    ['-ExecutionPolicy', 'Bypass', '-File', killScript],
+    ['-ExecutionPolicy', 'Bypass', '-File', `"${killScript}"`],
     { stdio: 'inherit', shell: true, cwd: root }
   );
   run('npm', ['run', 'build']);

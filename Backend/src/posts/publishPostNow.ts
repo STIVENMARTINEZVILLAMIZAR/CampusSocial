@@ -4,6 +4,9 @@ import type { Publicacion, RedSocial, ResultadoRed } from '../types';
 import { publishToInstagram } from '../social/instagram';
 import { publishToFacebook } from '../social/facebook';
 import { publishToLinkedIn } from '../social/linkedin';
+import { resolveAutomationWebhookUrl, resolveAutomationWebhookSecret } from '../integracion/automationWebhook';
+import { buildAutomationWebhookHeaders } from '../integracion/automationWebhookHeaders';
+import type { AutomationPostPayload } from '../integracion/automationTypes';
 
 export async function publishPostById(postId: string, userId: string): Promise<void> {
   const db = getFirestore();
@@ -22,6 +25,57 @@ export async function publishPostById(postId: string, userId: string): Promise<v
 
   const tokensSnap = await db.collection('tokens_redes').doc(userId).get();
   const tokens = tokensSnap.data() ?? {};
+
+  const webhookUrl = await resolveAutomationWebhookUrl(userId);
+  if (webhookUrl) {
+    const secret = resolveAutomationWebhookSecret();
+    const li = tokens.linkedin as { memberUrn?: string; displayName?: string } | undefined;
+
+    const payload: AutomationPostPayload = {
+      topic: post.titulo,
+      tone: 'neutral',
+      include_image: !!post.imagenUrl,
+      telegram_notify: false,
+      schedule_now: true,
+      title: post.titulo,
+      body: post.contenido,
+      platforms: post.redesDestino as any,
+      image_url: post.imagenUrl,
+      post_id: post.id,
+      action: 'publish',
+      provider: 'make',
+      linkedin_member_urn: li?.memberUrn,
+      linkedin_display_name: li?.displayName,
+    };
+
+    const res = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...buildAutomationWebhookHeaders(secret),
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const text = await res.text();
+    if (!res.ok) {
+      await postRef.update({
+        estado: 'fallido',
+        actualizadoEn: FieldValue.serverTimestamp(),
+        fechaProgramada: null,
+        resultados: { webhook: { success: false, error: text.slice(0, 200) } }
+      });
+      throw new Error(`Make Webhook falló: ${res.status} ${text.slice(0, 100)}`);
+    }
+
+    await postRef.update({
+      estado: 'publicado',
+      actualizadoEn: FieldValue.serverTimestamp(),
+      fechaProgramada: null,
+      resultados: { webhook: { success: true } }
+    });
+    return;
+  }
 
   const resultados: Partial<Record<RedSocial, ResultadoRed>> = {};
 

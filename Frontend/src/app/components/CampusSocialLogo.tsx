@@ -17,9 +17,9 @@ const sizeMap = {
 };
 
 const textSizeMap = {
-  sm: 'text-sm font-semibold',
-  md: 'text-lg font-bold bg-gradient-to-r from-[#0B1F4B] to-[#2BBDE8] bg-clip-text text-transparent',
-  lg: 'text-xl font-bold bg-gradient-to-r from-[#0B1F4B] to-[#2BBDE8] bg-clip-text text-transparent',
+  sm: 'text-sm font-bold bg-gradient-to-r from-[#0B1F4B] to-[#2BBDE8] dark:from-[#60a5fa] dark:to-[#22d3ee] bg-clip-text text-transparent',
+  md: 'text-lg font-bold bg-gradient-to-r from-[#0B1F4B] to-[#2BBDE8] dark:from-[#60a5fa] dark:to-[#22d3ee] bg-clip-text text-transparent',
+  lg: 'text-xl font-bold bg-gradient-to-r from-[#0B1F4B] to-[#2BBDE8] dark:from-[#60a5fa] dark:to-[#22d3ee] bg-clip-text text-transparent',
 };
 
 export function CampusSocialLogo({

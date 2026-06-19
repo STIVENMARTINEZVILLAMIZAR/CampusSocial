@@ -115,7 +115,12 @@ export type AutomationPostPayload = {
   platforms: string[];
   body?: string;
   image_url?: string | null;
-  action?: 'publish' | 'verify_channel';
+  action?: 'publish' | 'verify_channel' | 'notify_scheduled';
+  title?: string;
+  campus_published?: boolean;
+  provider?: string;
+  post_id?: string;
+  scheduled_at?: string;
 };
 
 export type AutomationPostResponse = {
